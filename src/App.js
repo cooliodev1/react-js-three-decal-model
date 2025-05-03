@@ -31,11 +31,11 @@ export default function App() {
   const snap = useSnapshot(state)
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+    <div style={{ position: "relative", width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
       <Canvas
         shadows
         camera={{ position: [0, 0, 4], fov: 45 }}
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
+        style={{ width: "100%", height: "100%" }}>
         <ambientLight intensity={0.7} />
         <spotLight intensity={0.5} angle={0.1} penumbra={1} position={[10, 15, 10]} castShadow />
         <Shoe />
@@ -54,8 +54,10 @@ export default function App() {
           maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
-      <Picker />
-      <DecalControls />
+      <div style={{ position: "fixed", top: "20px", right: "20px", zIndex: 1000, display: "flex", flexDirection: "column", gap: "20px" }}>
+        <Picker />
+        <DecalControls />
+      </div>
     </div>
   )
 }
@@ -164,13 +166,11 @@ function Picker() {
   return (
     <div
       style={{
-        position: "absolute",
-        top: "20px",
-        left: "20px",
         display: snap.current ? "block" : "none",
         background: "rgba(255,255,255,0.9)",
         padding: "10px",
         borderRadius: "4px",
+        backdropFilter: "blur(10px)",
       }}>
       <HexColorPicker
         className="picker"
@@ -210,13 +210,11 @@ function DecalControls() {
   return (
     <div
       style={{
-        position: "absolute",
-        bottom: "20px",
-        left: "20px",
         background: "rgba(255,255,255,0.9)",
         padding: "10px",
         borderRadius: "4px",
         maxWidth: "320px",
+        backdropFilter: "blur(10px)",
       }}>
       <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Decal Transform Controls</h2>
       <label style={{ display: "block", marginBottom: "8px" }}>

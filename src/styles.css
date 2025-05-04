@@ -19,7 +19,7 @@ body,
 }
 
 body {
-  background: rgb(0, 0, 0);
+  /* background: white; */
   font-family: "Inter var", sans-serif;
   display: flex;
   justify-content: center;

@@ -55,6 +55,10 @@ const state = proxy({
   presets: {
     saved: [], // Will store saved presets
     current: null // Currently selected preset
+  },
+  video: {
+    recordings: [],
+    isRecording: false
   }
 })
 
@@ -148,6 +152,7 @@ export default function App() {
       <DecalControls />
       <LightingControls />
       <PresetControls />
+      <VideoRecorder />
     </div>
   )
 }
@@ -884,6 +889,152 @@ function PresetControls() {
               }}>
               ×
             </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function VideoRecorder() {
+  const snap = useSnapshot(state)
+  const [mediaRecorder, setMediaRecorder] = useState(null)
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    // Get the canvas element from Three.js
+    const canvas = document.querySelector('canvas')
+    canvasRef.current = canvas
+  }, [])
+
+  const startRecording = async () => {
+    if (!canvasRef.current) return
+    
+    const stream = canvasRef.current.captureStream(60) // 60fps
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 5000000
+    })
+
+    const chunks = []
+    recorder.ondataavailable = (e) => chunks.push(e.data)
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' })
+      const url = URL.createObjectURL(blob)
+      const timestamp = new Date().toISOString()
+      const newRecording = {
+        id: Date.now(),
+        name: `Recording ${snap.video.recordings.length + 1}`,
+        url,
+        timestamp
+      }
+      state.video.recordings = [...snap.video.recordings, newRecording]
+      localStorage.setItem('videoRecordings', JSON.stringify(state.video.recordings))
+      state.video.isRecording = false
+    }
+
+    setMediaRecorder(recorder)
+    recorder.start()
+    state.video.isRecording = true
+
+    // Stop recording after 8 seconds
+    setTimeout(() => {
+      if (recorder.state === 'recording') {
+        recorder.stop()
+      }
+    }, 8000)
+  }
+
+  useEffect(() => {
+    // Load saved recordings from localStorage
+    const savedRecordings = localStorage.getItem('videoRecordings')
+    if (savedRecordings) {
+      state.video.recordings = JSON.parse(savedRecordings)
+    }
+  }, [])
+
+  const deleteRecording = (id) => {
+    state.video.recordings = snap.video.recordings.filter(r => r.id !== id)
+    localStorage.setItem('videoRecordings', JSON.stringify(state.video.recordings))
+  }
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '20px',
+      right: '20px',
+      background: 'rgba(255,255,255,0.9)',
+      padding: '10px',
+      borderRadius: '4px',
+      maxWidth: '320px',
+      maxHeight: '400px',
+      overflowY: 'auto'
+    }}>
+      <h2 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Video Recorder</h2>
+      <button
+        onClick={startRecording}
+        disabled={snap.video.isRecording}
+        style={{
+          width: '100%',
+          padding: '8px',
+          marginBottom: '8px',
+          background: snap.video.isRecording ? '#ccc' : '#4CAF50',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: snap.video.isRecording ? 'default' : 'pointer'
+        }}>
+        {snap.video.isRecording ? 'Recording... (8s)' : 'Start Recording'}
+      </button>
+
+      <div style={{ borderTop: '1px solid #ccc', paddingTop: '8px' }}>
+        {snap.video.recordings.map((recording) => (
+          <div
+            key={recording.id}
+            style={{
+              marginBottom: '8px',
+              padding: '8px',
+              background: '#f5f5f5',
+              borderRadius: '4px'
+            }}>
+            <div style={{ marginBottom: '4px' }}>{recording.name}</div>
+            <video
+              controls
+              style={{
+                width: '100%',
+                marginBottom: '4px',
+                borderRadius: '2px'
+              }}
+              src={recording.url}
+            />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <a
+                href={recording.url}
+                download={`${recording.name}.webm`}
+                style={{
+                  flex: 1,
+                  padding: '4px 8px',
+                  background: '#2196F3',
+                  color: 'white',
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  borderRadius: '4px'
+                }}>
+                Download
+              </a>
+              <button
+                onClick={() => deleteRecording(recording.id)}
+                style={{
+                  padding: '4px 8px',
+                  background: '#ff4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}>
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>

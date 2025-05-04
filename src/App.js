@@ -8,22 +8,13 @@ import { MOUSE } from "three"
 // Create a reactive state for parts, selection, decal transformation, drag status, and orbit toggle
 const state = proxy({
   current: null,
-  items: {
-    laces: "#ffffff",
-    mesh: "#ffffff",
-    caps: "#ffffff",
-    inner: "#ffffff",
-    sole: "#ffffff",
-    stripes: "#ffffff",
-    band: "#ffffff",
-    patch: "#ffffff",
-  },
+  items: {}, // Will be populated with materials from GLB
   decalTransform: {
     position: [0, 0.1, 0.5],
     rotation: [0, 0, 0],
     scale: 0.3,
   },
-  decalTarget: "mesh",
+  decalTarget: "", // Will be set to first material found
   orbitEnabled: true,
 })
 
@@ -31,11 +22,11 @@ export default function App() {
   const snap = useSnapshot(state)
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <Canvas
         shadows
-        camera={{ position: [0, 0, 4], fov: 45 }}
-        style={{ width: "100%", height: "100%" }}>
+        camera={{ position: [0, 0, 4], fov: 5 }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
         <ambientLight intensity={0.7} />
         <spotLight intensity={0.5} angle={0.1} penumbra={1} position={[10, 15, 10]} castShadow />
         <Shoe />
@@ -43,21 +34,21 @@ export default function App() {
         <ContactShadows position={[0, -0.8, 0]} opacity={0.25} scale={10} blur={1.5} far={0.8} />
         <OrbitControls
           enableRotate={snap.orbitEnabled}
-          enableZoom={false}
+          enableZoom={true}  // Enable zoom
           enablePan={false}
           mouseButtons={{
             LEFT: MOUSE.PAN,
             RIGHT: MOUSE.ROTATE,
             MIDDLE: MOUSE.DOLLY,
           }}
+          minDistance={2}    // Minimum zoom distance
+          maxDistance={10}   // Maximum zoom distance
           minPolarAngle={Math.PI / 2}
           maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
-      <div style={{ position: "fixed", top: "20px", right: "20px", zIndex: 1000, display: "flex", flexDirection: "column", gap: "20px" }}>
-        <Picker />
-        <DecalControls />
-      </div>
+      <Picker />
+      <DecalControls />
     </div>
   )
 }
@@ -65,10 +56,28 @@ export default function App() {
 function Shoe() {
   const ref = useRef()
   const snap = useSnapshot(state)
-  const { nodes, materials } = useGLTF("shoe-draco.glb")
+  const { nodes, materials } = useGLTF("hoodie.glb")
   const decalTexture = useTexture("/decal.png")
   const [hovered, setHovered] = useState(null)
   const [dragging, setDragging] = useState(false)
+
+  // Initialize state with dynamic materials when component mounts
+  useEffect(() => {
+    const materialEntries = Object.entries(materials).reduce((acc, [key, _]) => {
+      acc[key] = "#ffffff"
+      return acc
+    }, {})
+    
+    // Update state with found materials
+    state.items = materialEntries
+  }, [materials])
+
+  // Set initial decalTarget in useEffect
+  useEffect(() => {
+    if (Object.keys(materials).length > 0) {
+      state.decalTarget = Object.keys(materials)[0]
+    }
+  }, [materials])
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
@@ -110,6 +119,12 @@ function Shoe() {
     }
   }
 
+  // Add this useEffect for debugging
+  useEffect(() => {
+    console.log("Available nodes:", Object.keys(nodes))
+    console.log("Available materials:", Object.keys(materials))
+  }, [nodes, materials])
+
   return (
     <group
       ref={ref}
@@ -132,10 +147,18 @@ function Shoe() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}>
       {Object.entries(nodes)
-        .filter(([key]) => key.startsWith("shoe"))
-        .map(([key, node], index) => {
-          const materialKey = key === "shoe" ? "laces" : ["mesh", "caps", "inner", "sole", "stripes", "band", "patch"][index - 1]
+        // Remove the shoe filter to show all meshes
+        .filter(([key]) => typeof nodes[key].geometry !== 'undefined')
+        .map(([key, node]) => {
+          console.log("Processing node:", key) // Debug log
+          const materialKey = node.material?.name || key
           const material = materials[materialKey]
+
+          if (!material) {
+            console.log("No material found for:", key) // Debug log
+            return null
+          }
+
           return (
             <mesh
               key={materialKey}
@@ -166,11 +189,13 @@ function Picker() {
   return (
     <div
       style={{
+        position: "absolute",
+        top: "20px",
+        left: "20px",
         display: snap.current ? "block" : "none",
         background: "rgba(255,255,255,0.9)",
         padding: "10px",
         borderRadius: "4px",
-        backdropFilter: "blur(10px)",
       }}>
       <HexColorPicker
         className="picker"
@@ -210,24 +235,27 @@ function DecalControls() {
   return (
     <div
       style={{
+        position: "absolute",
+        bottom: "20px",
+        left: "20px",
         background: "rgba(255,255,255,0.9)",
         padding: "10px",
         borderRadius: "4px",
         maxWidth: "320px",
-        backdropFilter: "blur(10px)",
       }}>
       <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Decal Transform Controls</h2>
       <label style={{ display: "block", marginBottom: "8px" }}>
         Select Target Mesh:
-        <select value={snap.decalTarget} onChange={updateTarget} style={{ display: "block", marginTop: "4px", width: "100%" }}>
-          <option value="laces">Laces</option>
-          <option value="mesh">Mesh</option>
-          <option value="caps">Caps</option>
-          <option value="inner">Inner</option>
-          <option value="sole">Sole</option>
-          <option value="stripes">Stripes</option>
-          <option value="band">Band</option>
-          <option value="patch">Patch</option>
+        <select 
+          value={snap.decalTarget} 
+          onChange={updateTarget} 
+          style={{ display: "block", marginTop: "4px", width: "100%" }}
+        >
+          {Object.keys(snap.items).map((materialKey) => (
+            <option key={materialKey} value={materialKey}>
+              {materialKey}
+            </option>
+          ))}
         </select>
       </label>
       <label style={{ display: "block", marginBottom: "4px" }}>

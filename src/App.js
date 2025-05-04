@@ -1,9 +1,9 @@
 import { useRef, useState, useEffect } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
-import { HexColorPicker } from "react-colorful"
 import { proxy, useSnapshot } from "valtio"
-import { MOUSE, PCFSoftShadowMap, Color } from "three"
+import { MOUSE, PCFSoftShadowMap, Color, TextureLoader } from "three"
+import { HexColorPicker } from "react-colorful"
 
 // Create a reactive state for parts, selection, decal transformation, drag status, orbit toggle, and lighting/shadow properties
 const state = proxy({
@@ -20,7 +20,7 @@ const state = proxy({
   lights: {
     ambient: {
       intensity: 0.07,
-      position: [0, 5, 0]
+      position: [0, 5, 0] // Add ambient light position
     },
     spot: {
       intensity: 0.5,
@@ -59,8 +59,40 @@ const state = proxy({
   video: {
     recordings: [],
     isRecording: false
+  },
+  materials: null, // Add this line
+  materialPreset: {
+    current: 'tactical',  // Default preset
+    colors: {
+      'tactical': '',
+      'plaid-red': ''
+    }
   }
 })
+
+// Add material definitions for different styles
+const materialPresets = {
+  'tactical': {
+    name: 'Tactical',
+    textures: {
+      baseColor: '/tactical/basecolor.png',
+      emissive: '/tactical/emissive.png',
+      height: '/tactical/height.png',
+      metallic: '/tactical/metallic.png',
+      normal: '/tactical/normal.png',
+      roughness: '/tactical/roughness.png',
+    },
+  },
+  'plaid-red': {
+    name: 'Red Plaid',
+    textures: {
+      baseColor: '/plaid-red/basecolor.png',
+      normal: '/plaid-red/normal.png',
+      metallic: '/plaid-red/metallic.png',
+      emissive: '/plaid-red/emissive.png',
+    },
+  }
+}
 
 export default function App() {
   const snap = useSnapshot(state)
@@ -89,16 +121,16 @@ export default function App() {
           width: "100%", 
           height: "100%" 
         }}>
-        <ambientLight intensity={snap.lights.ambient.intensity} />
+        <ambientLight 
+          intensity={snap.lights.ambient.intensity} 
+          position={snap.lights.ambient.position} 
+        />
         <spotLight 
           intensity={snap.lights.spot.intensity} 
           angle={snap.lights.spot.angle} 
           penumbra={snap.lights.spot.penumbra} 
           position={snap.lights.spot.position} 
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-bias={-0.0001}
+          castShadow 
         />
         <hemisphereLight 
           intensity={snap.lights.hemisphere.intensity}
@@ -148,7 +180,8 @@ export default function App() {
           maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
-      <Picker />
+      <MaterialPresetPicker />
+      
       <DecalControls />
       <LightingControls />
       <PresetControls />
@@ -165,16 +198,59 @@ function Model3D() {
   const decalTexture = useTexture("/decal.png")
   const [hovered, setHovered] = useState(null)
   const [dragging, setDragging] = useState(false)
+  const [loadedTextures, setLoadedTextures] = useState({})
+
+  // Load textures for current material preset
+  useEffect(() => {
+    const loader = new TextureLoader()
+    const currentPreset = materialPresets[snap.materialPreset.current]
+
+    const loadTexture = async (url) => {
+      return new Promise((resolve) => {
+        loader.load(url, resolve)
+      })
+    }
+
+    const loadAllTextures = async () => {
+      const textures = {}
+      for (const [key, path] of Object.entries(currentPreset.textures)) {
+        textures[key] = await loadTexture(path)
+      }
+      setLoadedTextures(textures)
+    }
+
+    loadAllTextures()
+  }, [snap.materialPreset.current]) // Add this dependency
+
+  // Apply textures to materials
+  useEffect(() => {
+    if (Object.keys(loadedTextures).length > 0) {
+      Object.values(materials).forEach(material => {
+        if (loadedTextures.baseColor) material.map = loadedTextures.baseColor
+        if (loadedTextures.normal) material.normalMap = loadedTextures.normal
+        if (loadedTextures.roughness) material.roughnessMap = loadedTextures.roughness
+        if (loadedTextures.metallic) material.metalnessMap = loadedTextures.metallic
+        if (loadedTextures.ao) material.aoMap = loadedTextures.ao
+        if (loadedTextures.height) material.heightMap = loadedTextures.height
+        if (loadedTextures.emissive) material.emissiveMap = loadedTextures.emissive
+        material.needsUpdate = true
+      })
+    }
+  }, [loadedTextures, materials])
 
   // Initialize state with dynamic materials when component mounts
   useEffect(() => {
-    const materialEntries = Object.entries(materials).reduce((acc, [key, _]) => {
-      acc[key] = "#ffffff"
-      return acc
-    }, {})
-    
-    // Update state with found materials
-    state.items = materialEntries
+    if (materials) {
+      // Update state with materials
+      state.materials = materials
+      
+      // Your existing material entries code
+      const materialEntries = Object.entries(materials).reduce((acc, [key, _]) => {
+        acc[key] = "#ffffff"
+        return acc
+      }, {})
+      state.items = materialEntries
+    }
   }, [materials])
 
   // Set initial decalTarget in useEffect
@@ -1038,6 +1114,209 @@ function VideoRecorder() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function MaterialPresetPicker() {
+  const snap = useSnapshot(state)
+  
+  const switchMaterialPreset = (presetKey) => {
+    state.materialPreset.current = presetKey
+    // Apply the preset color to all materials
+    Object.keys(state.items).forEach(materialKey => {
+      state.items[materialKey] = state.materialPreset.colors[presetKey]
+    })
+  }
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "20px",
+      left: "300px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px"
+    }}>
+      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Material Presets</h2>
+      <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
+        {Object.entries(materialPresets).map(([key, preset]) => (
+          <button
+            key={key}
+            onClick={() => switchMaterialPreset(key)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "4px",
+              border: "none",
+              background: snap.materialPreset.current === key ? "#2196F3" : "#4CAF50",
+              color: "white",
+              cursor: "pointer"
+            }}>
+            {preset.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TextureControls() {
+  const snap = useSnapshot(state)
+  const currentPreset = materialPresets[snap.materialPreset.current]
+
+  const updateTextureProperty = (mapType, property, value) => {
+    if (!currentPreset || !currentPreset.textures[mapType] || !snap.materials) return
+
+    // Use materials from state instead of global materials
+    Object.values(snap.materials).forEach(material => {
+      const textureMap = material[getTextureMapProperty(mapType)]
+      if (textureMap) {
+        switch (property) {
+          case 'repeatX':
+            textureMap.repeat.x = parseFloat(value)
+            break
+          case 'repeatY':
+            textureMap.repeat.y = parseFloat(value)
+            break
+          case 'offsetX':
+            textureMap.offset.x = parseFloat(value)
+            break
+          case 'offsetY':
+            textureMap.offset.y = parseFloat(value)
+            break
+          case 'rotation':
+            textureMap.rotation = parseFloat(value)
+            break
+          case 'intensity':
+            if (mapType === 'emissive') {
+              material.emissiveIntensity = parseFloat(value)
+            }
+            break
+        }
+        textureMap.needsUpdate = true
+      }
+    })
+  }
+
+  const getTextureMapProperty = (mapType) => {
+    switch (mapType) {
+      case 'color': return 'map'
+      case 'normal': return 'normalMap'
+      case 'roughness': return 'roughnessMap'
+      case 'metallic': return 'metalnessMap'
+      case 'height': return 'heightMap'
+      case 'emissive': return 'emissiveMap'
+      case 'ao': return 'aoMap'
+      default: return mapType
+    }
+  }
+
+  useEffect(() => {
+    if (!snap.materials) {
+      console.warn('Materials not yet loaded into state')
+    }
+  }, [snap.materials])
+
+  const TextureControl = ({ mapType, label }) => (
+    <div style={{ marginBottom: "16px" }}>
+      <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>{label}</h3>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Repeat X:
+        <input
+          type="range"
+          min={0.1}
+          max={10}
+          step={0.1}
+          defaultValue={1}
+          onChange={(e) => updateTextureProperty(mapType, 'repeatX', e.target.value)}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Repeat Y:
+        <input
+          type="range"
+          min={0.1}
+          max={10}
+          step={0.1}
+          defaultValue={1}
+          onChange={(e) => updateTextureProperty(mapType, 'repeatY', e.target.value)}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Offset X:
+        <input
+          type="range"
+          min={-1}
+          max={1}
+          step={0.01}
+          defaultValue={0}
+          onChange={(e) => updateTextureProperty(mapType, 'offsetX', e.target.value)}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Offset Y:
+        <input
+          type="range"
+          min={-1}
+          max={1}
+          step={0.01}
+          defaultValue={0}
+          onChange={(e) => updateTextureProperty(mapType, 'offsetY', e.target.value)}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Rotation:
+        <input
+          type="range"
+          min={0}
+          max={Math.PI * 2}
+          step={0.01}
+          defaultValue={0}
+          onChange={(e) => updateTextureProperty(mapType, 'rotation', e.target.value)}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      {mapType === 'emissive' && (
+        <label style={{ display: "block", marginBottom: "4px" }}>
+          Emission Intensity:
+          <input
+            type="range"
+            min={0}
+            max={5}
+            step={0.1}
+            defaultValue={1}
+            onChange={(e) => updateTextureProperty(mapType, 'intensity', e.target.value)}
+            style={{ width: "100%", marginTop: "4px" }}
+          />
+        </label>
+      )}
+    </div>
+  )
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "20px",
+      left: "500px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px",
+      maxWidth: "320px",
+      maxHeight: "80vh",
+      overflowY: "auto"
+    }}>
+      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Texture Controls</h2>
+      {currentPreset && Object.entries(currentPreset.textures).map(([mapType, _]) => (
+        <TextureControl
+          key={mapType}
+          mapType={mapType}
+          label={mapType.charAt(0).toUpperCase() + mapType.slice(1) + ' Map'}
+        />
+      ))}
     </div>
   )
 }

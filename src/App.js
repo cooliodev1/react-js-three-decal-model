@@ -73,23 +73,27 @@ const state = proxy({
 // Add material definitions for different styles
 const materialPresets = {
   'tactical': {
-    name: 'Tactical',
+    name: 'New',
     textures: {
-      baseColor: '/tactical/basecolor.png',
-      emissive: '/tactical/emissive.png',
-      height: '/tactical/height.png',
-      metallic: '/tactical/metallic.png',
-      normal: '/tactical/normal.png',
-      roughness: '/tactical/roughness.png',
+      baseColor: '/blue-turbo-acryllic/blue-turbo-acryllic_BaseColor.png',
+      height: '/blue-turbo-acryllic/blue-turbo-acryllic_Height.png',
+      normal: '/blue-turbo-acryllic/blue-turbo-acryllic_Normal.png',
+      roughness: '/blue-turbo-acryllic/blue-turbo-acryllic_Roughness.png',
+      ao: '/blue-turbo-acryllic/blue-turbo-acryllic_AmbientOcclusion.png',
+      metallic: '/blue-turbo-acryllic/blue-turbo-acryllic_Metallic.png',
+      opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
     },
   },
-  'plaid-red': {
-    name: 'Red Plaid',
+  'black-acryllic-lines': {
+    name: 'Black Acryllic Lines',
     textures: {
-      baseColor: '/plaid-red/basecolor.png',
-      normal: '/plaid-red/normal.png',
-      metallic: '/plaid-red/metallic.png',
-      emissive: '/plaid-red/emissive.png',
+      baseColor: '/black-acryllic-lines/black-acryllic-lines_BaseColor.png',
+      height: '/black-acryllic-linesblack-acryllic-linesc_Height.png',
+      normal: '/black-acryllic-lines/black-acryllic-lines_Normal.png',
+      roughness: '/black-acryllic-lines/black-acryllic-lines_Roughness.png',
+      ao: '/black-acryllic-lines/black-acryllic-lines_AmbientOcclusion.png',
+      metallic: '/black-acryllic-lines/black-acryllic-lines_Metallic.png',
+      opacity: '/black-acryllic-lines/black-acryllic-lines_Opacity.png',
     },
   }
 }

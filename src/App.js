@@ -3,7 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
 import { HexColorPicker } from "react-colorful"
 import { proxy, useSnapshot } from "valtio"
-import { MOUSE } from "three"
+import { MOUSE, PCFSoftShadowMap, Color } from "three"
 
 // Create a reactive state for parts, selection, decal transformation, drag status, orbit toggle, and lighting/shadow properties
 const state = proxy({
@@ -62,14 +62,35 @@ export default function App() {
       <Canvas
         shadows
         camera={{ position: [0, 0, 4], fov: 5 }}
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
+        gl={{ 
+          alpha: false,
+          antialias: true,
+          logarithmicDepthBuffer: true,
+          shadowMap: {
+            enabled: true,
+            type: PCFSoftShadowMap
+          }
+        }}
+        scene={{
+          background: new Color('#000000')
+        }}
+        style={{ 
+          position: "absolute", 
+          top: 0, 
+          left: 0, 
+          width: "100%", 
+          height: "100%" 
+        }}>
         <ambientLight intensity={snap.lights.ambient.intensity} />
         <spotLight 
           intensity={snap.lights.spot.intensity} 
           angle={snap.lights.spot.angle} 
           penumbra={snap.lights.spot.penumbra} 
           position={snap.lights.spot.position} 
-          castShadow 
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-bias={-0.0001}
         />
         <hemisphereLight 
           intensity={snap.lights.hemisphere.intensity}
@@ -85,7 +106,15 @@ export default function App() {
         <directionalLight 
           intensity={snap.lights.directional.intensity}
           position={snap.lights.directional.position}
-          castShadow={snap.lights.directional.castShadow}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-far={50}
+          shadow-camera-left={-10}
+          shadow-camera-right={10}
+          shadow-camera-top={10}
+          shadow-camera-bottom={-10}
+          shadow-bias={-0.0001}
         />
         <Model3D />
         {/* <Environment preset="city" /> */}
@@ -233,7 +262,10 @@ function Model3D() {
               castShadow
               geometry={node.geometry}
               material={material}
-              material-color={snap.items[materialKey]}>
+              material-color={snap.items[materialKey]}
+              material-envMapIntensity={0.8}
+              material-roughness={0.7}
+              material-metalness={0.2}>
               {shouldApplyDecal(materialKey) && (
                 <Decal
                   mesh={node}

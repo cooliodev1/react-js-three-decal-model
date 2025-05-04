@@ -51,6 +51,10 @@ const state = proxy({
     scale: 10,
     blur: 1.5,
     far: 0.8
+  },
+  presets: {
+    saved: [], // Will store saved presets
+    current: null // Currently selected preset
   }
 })
 
@@ -143,6 +147,7 @@ export default function App() {
       <Picker />
       <DecalControls />
       <LightingControls />
+      <PresetControls />
     </div>
   )
 }
@@ -768,6 +773,119 @@ function LightingControls() {
             style={{ width: "100%", marginTop: "4px" }}
           />
         </label>
+      </div>
+    </div>
+  )
+}
+
+function PresetControls() {
+  const snap = useSnapshot(state)
+
+  useEffect(() => {
+    // Load saved presets from localStorage on mount
+    const savedPresets = localStorage.getItem('lightingPresets')
+    if (savedPresets) {
+      state.presets.saved = JSON.parse(savedPresets)
+    }
+  }, [])
+
+  function saveCurrentSettings() {
+    const preset = {
+      id: Date.now(),
+      name: `Preset ${snap.presets.saved.length + 1}`,
+      settings: {
+        lights: JSON.parse(JSON.stringify(snap.lights)),
+        shadows: JSON.parse(JSON.stringify(snap.shadows)),
+        decalTransform: JSON.parse(JSON.stringify(snap.decalTransform))
+      }
+    }
+    const newPresets = [...snap.presets.saved, preset]
+    state.presets.saved = newPresets
+    localStorage.setItem('lightingPresets', JSON.stringify(newPresets))
+  }
+
+  function loadPreset(preset) {
+    state.lights = JSON.parse(JSON.stringify(preset.settings.lights))
+    state.shadows = JSON.parse(JSON.stringify(preset.settings.shadows))
+    state.decalTransform = JSON.parse(JSON.stringify(preset.settings.decalTransform))
+    state.presets.current = preset.id
+  }
+
+  function deletePreset(id) {
+    state.presets.saved = snap.presets.saved.filter(p => p.id !== id)
+    if (snap.presets.current === id) {
+      state.presets.current = null
+    }
+  }
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "50%",
+      right: "20px",
+      transform: "translateY(-50%)",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px",
+      maxWidth: "200px",
+      maxHeight: "400px",
+      overflowY: "auto"
+    }}>
+      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Presets</h2>
+      <button
+        onClick={saveCurrentSettings}
+        style={{
+          width: "100%",
+          padding: "8px",
+          marginBottom: "8px",
+          background: "#4CAF50",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer"
+        }}>
+        Save Current Settings
+      </button>
+      
+      <div style={{ borderTop: "1px solid #ccc", paddingTop: "8px" }}>
+        {snap.presets.saved.map((preset) => (
+          <div
+            key={preset.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: "4px",
+              padding: "4px",
+              background: snap.presets.current === preset.id ? "#e0e0e0" : "transparent",
+              borderRadius: "4px"
+            }}>
+            <button
+              onClick={() => loadPreset(preset)}
+              style={{
+                flex: 1,
+                padding: "4px 8px",
+                marginRight: "4px",
+                background: "none",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                cursor: "pointer"
+              }}>
+              {preset.name}
+            </button>
+            <button
+              onClick={() => deletePreset(preset.id)}
+              style={{
+                padding: "4px 8px",
+                background: "#ff4444",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer"
+              }}>
+              ×
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   )

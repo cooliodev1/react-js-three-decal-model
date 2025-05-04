@@ -16,6 +16,7 @@ const state = proxy({
   },
   decalTarget: "", // Will be set to first material found
   orbitEnabled: true,
+  animationEnabled: true, // Add this line
 })
 
 export default function App() {
@@ -29,7 +30,7 @@ export default function App() {
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
         <ambientLight intensity={0.7} />
         <spotLight intensity={0.5} angle={0.1} penumbra={1} position={[10, 15, 10]} castShadow />
-        <Shoe />
+        <Model3D />
         <Environment preset="city" />
         <ContactShadows position={[0, -0.8, 0]} opacity={0.25} scale={10} blur={1.5} far={0.8} />
         <OrbitControls
@@ -53,7 +54,8 @@ export default function App() {
   )
 }
 
-function Shoe() {
+// First, rename the component definition
+function Model3D() {
   const ref = useRef()
   const snap = useSnapshot(state)
   const { nodes, materials } = useGLTF("hoodie.glb")
@@ -80,6 +82,7 @@ function Shoe() {
   }, [materials])
 
   useFrame((state) => {
+    if (!snap.animationEnabled) return; // Add this line
     const t = state.clock.getElapsedTime()
     ref.current.rotation.set(Math.cos(t / 4) / 8, Math.sin(t / 4) / 8, -0.2 - (1 + Math.sin(t / 1.5)) / 20)
     ref.current.position.y = (1 + Math.sin(t / 1.5)) / 10
@@ -232,6 +235,10 @@ function DecalControls() {
     state.orbitEnabled = e.target.checked
   }
 
+  function toggleAnimation(e) {
+    state.animationEnabled = e.target.checked
+  }
+
   return (
     <div
       style={{
@@ -244,6 +251,15 @@ function DecalControls() {
         maxWidth: "320px",
       }}>
       <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Decal Transform Controls</h2>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Enable Bouncing Animation:
+        <input 
+          type="checkbox" 
+          checked={snap.animationEnabled} 
+          onChange={toggleAnimation} 
+          style={{ marginLeft: "8px" }} 
+        />
+      </label>
       <label style={{ display: "block", marginBottom: "8px" }}>
         Select Target Mesh:
         <select 

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber" // added useThree
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
 import { proxy, useSnapshot } from "valtio"
 import { MOUSE, PCFSoftShadowMap, Color, TextureLoader } from "three"
@@ -62,18 +62,20 @@ const state = proxy({
   },
   materials: null, // Add this line
   materialPreset: {
-    current: 'tactical',  // Default preset
+    current: 'blacky',  // Default preset
     colors: {
-      'tactical': '',
-      'plaid-red': ''
+      'blacky': '',
+      'blue-turbo': '',
+      'nylon-webbing': ''  // Added new preset placeholder
     }
-  }
+  },
+  cameraDistance: 4  // new state for camera zoom
 })
 
 // Add material definitions for different styles
 const materialPresets = {
-  'tactical': {
-    name: 'New',
+  'blue-turbo': {
+    name: 'Blue Turbo',
     textures: {
       baseColor: '/blue-turbo-acryllic/blue-turbo-acryllic_BaseColor.png',
       height: '/blue-turbo-acryllic/blue-turbo-acryllic_Height.png',
@@ -84,16 +86,28 @@ const materialPresets = {
       opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
     },
   },
-  'black-acryllic-lines': {
-    name: 'Black Acryllic Lines',
+  'blacky': {
+    name: 'blacky',
     textures: {
       baseColor: '/black-acryllic-lines/black-acryllic-lines_BaseColor.png',
-      height: '/black-acryllic-linesblack-acryllic-linesc_Height.png',
+      height: '/black-acryllic-lines/black-acryllic-lines_Height.png',
       normal: '/black-acryllic-lines/black-acryllic-lines_Normal.png',
       roughness: '/black-acryllic-lines/black-acryllic-lines_Roughness.png',
       ao: '/black-acryllic-lines/black-acryllic-lines_AmbientOcclusion.png',
       metallic: '/black-acryllic-lines/black-acryllic-lines_Metallic.png',
       opacity: '/black-acryllic-lines/black-acryllic-lines_Opacity.png',
+    },
+  },
+  'nylon-webbing': {
+    name: 'Nylon Webbing',
+    textures: {
+      baseColor: '/nylon-webbing/nylon-webbing_BaseColor.png',
+      height: '/nylon-webbing/nylon-webbing_Height.png',
+      normal: '/nylon-webbing/nylon-webbing_Normal.png',
+      roughness: '/nylon-webbing/nylon-webbing_Roughness.png',
+      ao: '/nylon-webbing/nylon-webbing_AmbientOcclusion.png',
+      metallic: '/nylon-webbing/nylon-webbing_Metallic.png',
+      opacity: '/nylon-webbing/nylon-webbing_Opacity.png',
     },
   }
 }
@@ -105,7 +119,7 @@ export default function App() {
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <Canvas
         shadows
-        camera={{ position: [0, 0, 4], fov: 5 }}
+        camera={{ position: [0, 0, snap.cameraDistance], fov: 5 }}
         gl={{ 
           alpha: false,
           antialias: true,
@@ -161,7 +175,6 @@ export default function App() {
           shadow-bias={-0.0001}
         />
         <Model3D />
-        {/* <Environment preset="city" /> */}
         <ContactShadows 
           position={snap.shadows.position}
           opacity={snap.shadows.opacity}
@@ -171,21 +184,22 @@ export default function App() {
         />
         <OrbitControls
           enableRotate={snap.orbitEnabled}
-          enableZoom={true}  // Enable zoom
+          enableZoom={true}
           enablePan={false}
           mouseButtons={{
             LEFT: MOUSE.PAN,
             RIGHT: MOUSE.ROTATE,
             MIDDLE: MOUSE.DOLLY,
           }}
-          minDistance={2}    // Minimum zoom distance
-          maxDistance={10}   // Maximum zoom distance
+          minDistance={2}
+          maxDistance={10}
           minPolarAngle={Math.PI / 2}
           maxPolarAngle={Math.PI / 2}
         />
+        <CameraController />
       </Canvas>
       <MaterialPresetPicker />
-      
+      <ZoomControls />
       <DecalControls />
       <LightingControls />
       <PresetControls />
@@ -1321,6 +1335,45 @@ function TextureControls() {
           label={mapType.charAt(0).toUpperCase() + mapType.slice(1) + ' Map'}
         />
       ))}
+    </div>
+  )
+}
+
+function CameraController() {
+  const { camera } = useThree()
+  const snap = useSnapshot(state)
+  useEffect(() => {
+    camera.position.set(0, 0, snap.cameraDistance)
+  }, [snap.cameraDistance, camera])
+  return null
+}
+
+function ZoomControls() {
+  const snap = useSnapshot(state)
+  function updateZoom(e) {
+    state.cameraDistance = parseFloat(e.target.value)
+  }
+  return (
+    <div style={{
+      position: "absolute",
+      top: "20px",
+      left: "520px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px"
+    }}>
+      <label>
+        Camera Zoom:
+        <input 
+          type="range" 
+          min="2" 
+          max="10" 
+          step="0.1" 
+          value={snap.cameraDistance} 
+          onChange={updateZoom}
+          style={{ width: "100%", marginLeft: "8px" }}
+        />
+      </label>
     </div>
   )
 }

@@ -117,24 +117,27 @@ export function OutlineEffect() {
     return mesh
   }, [scene, snap.outlinedMesh])
 
+  // Only render the OutlinePass if the selectedMesh is valid
+  if (!selectedMesh) {
+    return null
+  }
+
   return (
     <Effects disableGamma>
-      {selectedMesh && (
-        <outlinePass 
-          args={[
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            scene,
-            camera
-          ]}
-          selectedObjects={[selectedMesh]}
-          visibleEdgeColor={new THREE.Color(0x00ffff)}
-          hiddenEdgeColor={new THREE.Color(0x00ffff)}
-          edgeStrength={5}
-          edgeThickness={2}
-          edgeGlow={1}
-          pulsePeriod={0}
-        />
-      )}
+      <outlinePass
+        args={[
+          new THREE.Vector2(window.innerWidth, window.innerHeight),
+          scene,
+          camera,
+        ]}
+        selectedObjects={[selectedMesh]}
+        visibleEdgeColor={new THREE.Color(0x00ffff)}
+        hiddenEdgeColor={new THREE.Color(0x00ffff)}
+        edgeStrength={5}
+        edgeThickness={2}
+        edgeGlow={1}
+        pulsePeriod={0}
+      />
     </Effects>
   )
 }

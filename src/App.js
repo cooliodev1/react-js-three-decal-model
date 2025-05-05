@@ -4,9 +4,10 @@ import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@reac
 import { proxy, useSnapshot } from "valtio"
 import { MOUSE, PCFSoftShadowMap, Color, TextureLoader } from "three"
 import { HexColorPicker } from "react-colorful"
+import { MeshListPanel } from "./components/MeshListPanel" // Add this import
 
-// Create a reactive state for parts, selection, decal transformation, drag status, orbit toggle, and lighting/shadow properties
-const state = proxy({
+// Change the state declaration to export it
+export const state = proxy({
   current: null,
   items: {}, // Will be populated with materials from GLB
   decalTransform: {
@@ -72,6 +73,7 @@ const state = proxy({
   },
   cameraDistance: 4,  // new state for camera zoom
   decalMovementEnabled: true,  // new property to control decal movement
+  selectedMesh: null, // Add this line
 })
 
 // Add material definitions for different styles
@@ -218,6 +220,7 @@ export default function App() {
       <LightingControls />
       <PresetControls />
       <VideoRecorder />
+      <MeshListPanel /> {/* Add this line */}
     </div>
   )
 }
@@ -392,7 +395,9 @@ function Model3D() {
       }}
       onClick={(e) => {
         e.stopPropagation()
-        state.current = e.object.name || e.object.material.name
+        const meshName = e.object.name || e.object.material.name
+        state.current = meshName
+        state.selectedMesh = meshName // Add this line
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}>

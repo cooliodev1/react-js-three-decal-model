@@ -67,7 +67,8 @@ const state = proxy({
       'blacky': '',
       'cotton-tricotine': '',  // Added new preset placeholder
       'nylon-webbing': ''  // Added new preset placeholder
-    }
+    },
+    applyToTargetOnly: false  // Add this line
   },
   cameraDistance: 4,  // new state for camera zoom
   decalMovementEnabled: true,  // new property to control decal movement
@@ -256,18 +257,57 @@ function Model3D() {
   // Apply textures to materials
   useEffect(() => {
     if (Object.keys(loadedTextures).length > 0) {
-      Object.values(materials).forEach(material => {
-        if (loadedTextures.baseColor) material.map = loadedTextures.baseColor
-        if (loadedTextures.normal) material.normalMap = loadedTextures.normal
-        if (loadedTextures.roughness) material.roughnessMap = loadedTextures.roughness
-        if (loadedTextures.metallic) material.metalnessMap = loadedTextures.metallic
-        if (loadedTextures.ao) material.aoMap = loadedTextures.ao
-        if (loadedTextures.height) material.heightMap = loadedTextures.height
-        if (loadedTextures.emissive) material.emissiveMap = loadedTextures.emissive
-        material.needsUpdate = true
-      })
+      if (snap.materialPreset.applyToTargetOnly && snap.decalTarget) {
+        // Find the node that matches the selected target
+        const targetNode = nodes[snap.decalTarget];
+        if (targetNode) {
+          const materialKey = targetNode.material?.name || snap.decalTarget;
+          const sharedMaterial = materials[materialKey];
+          if (sharedMaterial) {
+            // Clone the material so that changes affect only this mesh
+            const targetMaterial = sharedMaterial.clone();
+            if (loadedTextures.baseColor)
+              targetMaterial.map = loadedTextures.baseColor;
+            if (loadedTextures.normal)
+              targetMaterial.normalMap = loadedTextures.normal;
+            if (loadedTextures.roughness)
+              targetMaterial.roughnessMap = loadedTextures.roughness;
+            if (loadedTextures.metallic)
+              targetMaterial.metalnessMap = loadedTextures.metallic;
+            if (loadedTextures.ao)
+              targetMaterial.aoMap = loadedTextures.ao;
+            if (loadedTextures.height)
+              targetMaterial.heightMap = loadedTextures.height;
+            if (loadedTextures.emissive)
+              targetMaterial.emissiveMap = loadedTextures.emissive;
+            targetMaterial.needsUpdate = true;
+            
+            // Assign the cloned material only to the target node
+            targetNode.material = targetMaterial;
+          }
+        }
+      } else {
+        // Apply to all materials
+        Object.values(materials).forEach(material => {
+          if (loadedTextures.baseColor)
+            material.map = loadedTextures.baseColor;
+          if (loadedTextures.normal)
+            material.normalMap = loadedTextures.normal;
+          if (loadedTextures.roughness)
+            material.roughnessMap = loadedTextures.roughness;
+          if (loadedTextures.metallic)
+            material.metalnessMap = loadedTextures.metallic;
+          if (loadedTextures.ao)
+            material.aoMap = loadedTextures.ao;
+          if (loadedTextures.height)
+            material.heightMap = loadedTextures.height;
+          if (loadedTextures.emissive)
+            material.emissiveMap = loadedTextures.emissive;
+          material.needsUpdate = true;
+        });
+      }
     }
-  }, [loadedTextures, materials])
+  }, [loadedTextures, materials, nodes, snap.materialPreset.applyToTargetOnly, snap.decalTarget]);
 
   // Initialize state with dynamic materials when component mounts
   useEffect(() => {
@@ -359,29 +399,29 @@ function Model3D() {
       {Object.entries(nodes)
         .filter(([key]) => typeof nodes[key].geometry !== 'undefined')
         .map(([key, node]) => {
-          // Use the node key as your unique identifier
-          const meshKey = key
-          // Get the material using the material's name fallback if needed
-          const materialKey = node.material?.name || key
-          const material = materials[materialKey]
+          // If this mesh is the selected target, use node.material 
+          // (which may have been cloned and updated in the effect)
+          const material = key === snap.decalTarget && node.material
+            ? node.material
+            : materials[node.material?.name || key];
 
           if (!material) {
-            return null
+            return null;
           }
 
           return (
             <mesh
-              key={meshKey}
-              name={meshKey} // <-- add this line
+              key={key}
+              name={key}
               receiveShadow
               castShadow
               geometry={node.geometry}
               material={material}
-              material-color={snap.items[meshKey]}
+              material-color={snap.items[key]}
               material-envMapIntensity={0.8}
               material-roughness={0.7}
               material-metalness={0.2}>
-              {meshKey === snap.decalTarget && (
+              {key === snap.decalTarget && (
                 <Decal
                   mesh={node}
                   position={snap.decalTransform.position}
@@ -392,7 +432,7 @@ function Model3D() {
                 />
               )}
             </mesh>
-          )
+          );
         })}
     </group>
   )
@@ -1160,10 +1200,22 @@ function MaterialPresetPicker() {
   
   const switchMaterialPreset = (presetKey) => {
     state.materialPreset.current = presetKey
-    // Apply the preset color to all materials
-    Object.keys(state.items).forEach(materialKey => {
-      state.items[materialKey] = state.materialPreset.colors[presetKey]
-    })
+    
+    if (snap.materialPreset.applyToTargetOnly) {
+      // Apply only to target mesh
+      if (snap.decalTarget) {
+        state.items[snap.decalTarget] = state.materialPreset.colors[presetKey]
+      }
+    } else {
+      // Apply to all materials
+      Object.keys(state.items).forEach(materialKey => {
+        state.items[materialKey] = state.materialPreset.colors[presetKey]
+      })
+    }
+  }
+
+  const toggleApplyToTarget = (e) => {
+    state.materialPreset.applyToTargetOnly = e.target.checked
   }
 
   return (
@@ -1176,6 +1228,19 @@ function MaterialPresetPicker() {
       borderRadius: "4px"
     }}>
       <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Material Presets</h2>
+      <label style={{ 
+        display: "block", 
+        marginBottom: "12px",
+        fontSize: "14px"
+      }}>
+        <input 
+          type="checkbox"
+          checked={snap.materialPreset.applyToTargetOnly}
+          onChange={toggleApplyToTarget}
+          style={{ marginRight: "8px" }}
+        />
+        Apply to target mesh only
+      </label>
       <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
         {Object.entries(materialPresets).map(([key, preset]) => (
           <button

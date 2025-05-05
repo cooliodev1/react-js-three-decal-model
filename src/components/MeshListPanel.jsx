@@ -2,9 +2,14 @@ import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDown } from "lucide-react"
 import { useSnapshot } from "valtio"
-
-// Import the state from App.js
+import { Effects } from "@react-three/drei"
 import { state } from "../App"
+import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass"
+import { useThree, extend } from "@react-three/fiber"
+import * as THREE from 'three'  // Add this import
+
+// Extend THREE with OutlinePass
+extend({ OutlinePass })
 
 const Accordion = AccordionPrimitive.Root
 const AccordionItem = AccordionPrimitive.Item
@@ -38,23 +43,11 @@ export function MeshListPanel() {
   const snap = useSnapshot(state)
 
   const handleMeshClick = (meshKey) => {
-    console.log('MeshListPanel - Mesh clicked:', meshKey)
-    console.log('Current state before update:', {
-      selectedMesh: snap.selectedMesh,
-      current: snap.current,
-      decalTarget: snap.decalTarget
-    })
-
     state.selectedMesh = meshKey
     state.current = meshKey
     state.decalTarget = meshKey
-
-    // Log state changes
-    console.log('State updated to:', {
-      selectedMesh: meshKey,
-      current: meshKey,
-      decalTarget: meshKey
-    })
+    // Add outline effect flag
+    state.outlinedMesh = meshKey
   }
 
   return (
@@ -105,5 +98,43 @@ export function MeshListPanel() {
         </AccordionItem>
       </Accordion>
     </div>
+  )
+}
+
+export function OutlineEffect() {
+  const snap = useSnapshot(state)
+  const { scene, camera } = useThree()
+
+  // Find the selected mesh in the scene
+  const selectedMesh = React.useMemo(() => {
+    if (!snap.outlinedMesh) return null
+    let mesh = null
+    scene.traverse((object) => {
+      if (object.name === snap.outlinedMesh) {
+        mesh = object
+      }
+    })
+    return mesh
+  }, [scene, snap.outlinedMesh])
+
+  return (
+    <Effects disableGamma>
+      {selectedMesh && (
+        <outlinePass 
+          args={[
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            scene,
+            camera
+          ]}
+          selectedObjects={[selectedMesh]}
+          visibleEdgeColor={new THREE.Color(0x00ffff)}
+          hiddenEdgeColor={new THREE.Color(0x00ffff)}
+          edgeStrength={5}
+          edgeThickness={2}
+          edgeGlow={1}
+          pulsePeriod={0}
+        />
+      )}
+    </Effects>
   )
 }

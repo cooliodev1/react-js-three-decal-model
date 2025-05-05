@@ -4,7 +4,7 @@ import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@reac
 import { proxy, useSnapshot } from "valtio"
 import { MOUSE, PCFSoftShadowMap, Color, TextureLoader } from "three"
 import { HexColorPicker } from "react-colorful"
-import { MeshListPanel } from "./components/MeshListPanel" // Add this import
+import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add this import
 
 // Change the state declaration to export it
 export const state = proxy({
@@ -74,9 +74,9 @@ export const state = proxy({
   cameraDistance: 4,  // new state for camera zoom
   decalMovementEnabled: true,  // new property to control decal movement
   selectedMesh: null, // Add this line
+  outlinedMesh: null, // Add this line
 })
 
-// Add material definitions for different styles
 const materialPresets = {
   'cotton-tricotine': {
     name: 'Cotton Tricotine',
@@ -132,7 +132,7 @@ export default function App() {
   const snap = useSnapshot(state)
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+    <>
       <Canvas
         shadows
         camera={{ position: [0, 0, snap.cameraDistance], fov: 5 }}
@@ -213,6 +213,7 @@ export default function App() {
           maxPolarAngle={Math.PI / 2}
         />
         <CameraController />
+        <OutlineEffect />
       </Canvas>
       <MaterialPresetPicker />
       <ZoomControls />
@@ -220,8 +221,8 @@ export default function App() {
       <LightingControls />
       <PresetControls />
       <VideoRecorder />
-      <MeshListPanel /> {/* Add this line */}
-    </div>
+      <MeshListPanel />
+    </>
   )
 }
 

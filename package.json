@@ -11,8 +11,8 @@
   "main": "src/index.js",
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.9",
-    "@react-three/drei": "9.76.0",
-    "@react-three/fiber": "8.13.3",
+    "@react-three/drei": "^9.76.0",
+    "@react-three/fiber": "^8.13.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.507.0",
@@ -21,7 +21,8 @@
     "react-dom": "18.2.0",
     "react-scripts": "5.0.1",
     "tailwind-merge": "^3.2.0",
-    "three": "0.153.0",
+    "three": "^0.153.0",
+    "three-stdlib": "^2.36.0",
     "valtio": "1.10.3"
   },
   "devDependencies": {

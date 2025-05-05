@@ -271,25 +271,22 @@ function Model3D() {
 
   // Initialize state with dynamic materials when component mounts
   useEffect(() => {
-    if (materials) {
-      // Update state with materials
-      state.materials = materials
-      
-      // Your existing material entries code
-      const materialEntries = Object.entries(materials).reduce((acc, [key, _]) => {
-        acc[key] = "#ffffff"
-        return acc
-      }, {})
-      state.items = materialEntries
-    }
-  }, [materials])
+    if (nodes) {
+      const nodeEntries = Object.entries(nodes)
+        .filter(([key, node]) => node.geometry)
+        .reduce((acc, [key, node]) => {
+          acc[key] = "#ffffff"
+          return acc
+        }, {})
+      state.items = nodeEntries
 
-  // Set initial decalTarget in useEffect
-  useEffect(() => {
-    if (Object.keys(materials).length > 0) {
-      state.decalTarget = Object.keys(materials)[0]
+      // Set the initial decalTarget to the first unique node key
+      const firstMeshKey = Object.keys(nodeEntries)[0]
+      if (firstMeshKey) {
+        state.decalTarget = firstMeshKey
+      }
     }
-  }, [materials])
+  }, [nodes])
 
   useFrame((state) => {
     if (!snap.animationEnabled) return; // Add this line
@@ -326,7 +323,7 @@ function Model3D() {
 
   const handlePointerDown = (e) => {
     if (e.button !== 0) return
-    if (e.object.material.name === snap.decalTarget) {
+    if (e.object.name === snap.decalTarget) { // Check the mesh's name
       e.stopPropagation()
       setDragging(true)
     }
@@ -343,7 +340,7 @@ function Model3D() {
       ref={ref}
       onPointerOver={(e) => {
         e.stopPropagation()
-        setHovered(e.object.material.name)
+        setHovered(e.object.name || e.object.material.name)
       }}
       onPointerOut={(e) => {
         if (e.intersections.length === 0) {
@@ -355,35 +352,36 @@ function Model3D() {
       }}
       onClick={(e) => {
         e.stopPropagation()
-        state.current = e.object.material.name
+        state.current = e.object.name || e.object.material.name
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}>
       {Object.entries(nodes)
-        // Remove the shoe filter to show all meshes
         .filter(([key]) => typeof nodes[key].geometry !== 'undefined')
         .map(([key, node]) => {
-          console.log("Processing node:", key) // Debug log
+          // Use the node key as your unique identifier
+          const meshKey = key
+          // Get the material using the material's name fallback if needed
           const materialKey = node.material?.name || key
           const material = materials[materialKey]
 
           if (!material) {
-            console.log("No material found for:", key) // Debug log
             return null
           }
 
           return (
             <mesh
-              key={materialKey}
+              key={meshKey}
+              name={meshKey} // <-- add this line
               receiveShadow
               castShadow
               geometry={node.geometry}
               material={material}
-              material-color={snap.items[materialKey]}
+              material-color={snap.items[meshKey]}
               material-envMapIntensity={0.8}
               material-roughness={0.7}
               material-metalness={0.2}>
-              {shouldApplyDecal(materialKey) && (
+              {meshKey === snap.decalTarget && (
                 <Decal
                   mesh={node}
                   position={snap.decalTransform.position}

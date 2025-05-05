@@ -65,7 +65,7 @@ const state = proxy({
     current: 'blacky',  // Default preset
     colors: {
       'blacky': '',
-      'blue-turbo': '',
+      'cotton-tricotine': '',  // Added new preset placeholder
       'nylon-webbing': ''  // Added new preset placeholder
     }
   },
@@ -74,6 +74,18 @@ const state = proxy({
 
 // Add material definitions for different styles
 const materialPresets = {
+  'cotton-tricotine': {
+    name: 'Cotton Tricotine',
+    textures: {
+      baseColor: '/cotton-tricotine/cotton-tricotine_BaseColor.png',
+      height: '/cotton-tricotine/cotton-tricotine_Height.png',
+      normal: '/cotton-tricotine/cotton-tricotine_Normal.png',
+      roughness: '/cotton-tricotine/cotton-tricotine_Roughness.png',
+      ao: '/cotton-tricotine/cotton-tricotine_AmbientOcclusion.png',
+      metallic: '/cotton-tricotine/cotton-tricotine_Metallic.png',
+      opacity: '/cotton-tricotine/cotton-tricotine_Opacity.png',
+    },
+  },
   'blue-turbo': {
     name: 'Blue Turbo',
     textures: {
@@ -212,7 +224,7 @@ export default function App() {
 function Model3D() {
   const ref = useRef()
   const snap = useSnapshot(state)
-  const { nodes, materials } = useGLTF("hoodie.glb")
+  const { nodes, materials } = useGLTF("hoodie2.glb")
   const decalTexture = useTexture("/decal.png")
   const [hovered, setHovered] = useState(null)
   const [dragging, setDragging] = useState(false)

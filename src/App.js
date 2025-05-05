@@ -393,12 +393,14 @@ function Model3D() {
       }}
       onPointerMissed={() => {
         state.current = null
+        state.outlinedMesh = null // Clear the outline when clicking outside
       }}
       onClick={(e) => {
         e.stopPropagation()
         const meshName = e.object.name || e.object.material.name
         state.current = meshName
-        state.selectedMesh = meshName // Add this line
+        state.selectedMesh = meshName
+        state.outlinedMesh = meshName // Set the outlined mesh
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}>

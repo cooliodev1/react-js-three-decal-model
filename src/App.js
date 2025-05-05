@@ -75,6 +75,7 @@ export const state = proxy({
   decalMovementEnabled: true,  // new property to control decal movement
   selectedMesh: null, // Add this line
   outlinedMesh: null, // Add this line
+  currentModel: "hoodie.glb", // Default model
 })
 
 const materialPresets = {
@@ -155,6 +156,7 @@ export default function App() {
           width: "100%", 
           height: "100%" 
         }}>
+          
         <ambientLight 
           intensity={snap.lights.ambient.intensity} 
           position={snap.lights.ambient.position} 
@@ -214,6 +216,7 @@ export default function App() {
         />
         <CameraController />
         <OutlineEffect />
+       
       </Canvas>
       <MaterialPresetPicker />
       <ZoomControls />
@@ -222,41 +225,131 @@ export default function App() {
       <PresetControls />
       <VideoRecorder />
       <MeshListPanel />
+      <ModelSwitcher />
     </>
   )
 }
 
+// Add a new floating panel with a button to switch models
+function ModelSwitcher() {
+  const snap = useSnapshot(state);
+
+  function switchModel() {
+    console.log("Current model:", state.currentModel);
+    // Make sure the path to new_model.glb is correct
+    const newModelPath = "/new_model.glb"; // Adjust this path to where your model is actually located
+    console.log("Switching to:", newModelPath);
+    state.currentModel = newModelPath;
+  }
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "20px",
+      left: "800px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px"
+    }}>
+      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Model Switcher</h2>
+      <button
+        onClick={switchModel}
+        style={{
+          padding: "8px 16px",
+          borderRadius: "4px",
+          border: "none",
+          background: "#4CAF50",
+          color: "white",
+          cursor: "pointer"
+        }}>
+        Switch to New Model
+      </button>
+      <div style={{ fontSize: "12px", marginTop: "4px", color: "#666" }}>
+        Current: {snap.currentModel}
+      </div>
+    </div>
+  );
+}
+
 // First, rename the component definition
 function Model3D() {
-  const ref = useRef()
-  const snap = useSnapshot(state)
-  const { nodes, materials } = useGLTF("hoodie2.glb")
-  const decalTexture = useTexture("/decal.png")
-  const [hovered, setHovered] = useState(null)
-  const [dragging, setDragging] = useState(false)
-  const [loadedTextures, setLoadedTextures] = useState({})
+  const ref = useRef();
+  const snap = useSnapshot(state);
+  const [currentLoadedModel, setCurrentLoadedModel] = useState(null);
+
+  // Clear the GLTF cache and dispose of previous model
+  useEffect(() => {
+    console.log("Model change detected:", snap.currentModel);
+    
+    // Cleanup previous model
+    if (currentLoadedModel) {
+      console.log("Cleaning up previous model");
+      currentLoadedModel.traverse((obj) => {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach(mat => mat.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
+      });
+    }
+
+    // Clear the cache
+    useGLTF.clear(snap.currentModel);
+    
+    // Load new model
+    const loadModel = async () => {
+      try {
+        const gltf = await useGLTF(snap.currentModel);
+        console.log("New model loaded:", gltf);
+        setCurrentLoadedModel(gltf.scene);
+      } catch (error) {
+        console.error("Error loading model:", error);
+      }
+    };
+
+    loadModel();
+
+    // Cleanup function
+    return () => {
+      useGLTF.clear(snap.currentModel);
+    };
+  }, [snap.currentModel]);
+
+  const { nodes, materials } = useGLTF(snap.currentModel);
+  console.log("Current nodes:", nodes);
+  console.log("Current materials:", materials);
+
+  const decalTexture = useTexture("/decal.png");
+  const [hovered, setHovered] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [loadedTextures, setLoadedTextures] = useState({});
 
   // Load textures for current material preset
   useEffect(() => {
-    const loader = new TextureLoader()
-    const currentPreset = materialPresets[snap.materialPreset.current]
+    const loader = new TextureLoader();
+    const currentPreset = materialPresets[snap.materialPreset.current];
 
     const loadTexture = async (url) => {
       return new Promise((resolve) => {
-        loader.load(url, resolve)
-      })
-    }
+        loader.load(url, resolve);
+      });
+    };
 
     const loadAllTextures = async () => {
-      const textures = {}
+      const textures = {};
       for (const [key, path] of Object.entries(currentPreset.textures)) {
-        textures[key] = await loadTexture(path)
+        textures[key] = await loadTexture(path);
       }
-      setLoadedTextures(textures)
-    }
+      setLoadedTextures(textures);
+    };
 
-    loadAllTextures()
-  }, [snap.materialPreset.current]) // Add this dependency
+    loadAllTextures();
+  }, [snap.materialPreset.current]); // Add this dependency
 
   // Apply textures to materials
   useEffect(() => {
@@ -319,99 +412,108 @@ function Model3D() {
       const nodeEntries = Object.entries(nodes)
         .filter(([key, node]) => node.geometry)
         .reduce((acc, [key, node]) => {
-          acc[key] = "#ffffff"
-          return acc
-        }, {})
-      state.items = nodeEntries
+          acc[key] = "#ffffff";
+          return acc;
+        }, {});
+      state.items = nodeEntries;
 
       // Set the initial decalTarget to the first unique node key
-      const firstMeshKey = Object.keys(nodeEntries)[0]
+      const firstMeshKey = Object.keys(nodeEntries)[0];
       if (firstMeshKey) {
-        state.decalTarget = firstMeshKey
+        state.decalTarget = firstMeshKey;
       }
     }
-  }, [nodes])
+  }, [nodes]);
 
   useFrame((state) => {
     if (!snap.animationEnabled) return; // Add this line
-    const t = state.clock.getElapsedTime()
-    ref.current.rotation.set(Math.cos(t / 4) / 8, Math.sin(t / 4) / 8, -0.2 - (1 + Math.sin(t / 1.5)) / 20)
-    ref.current.position.y = (1 + Math.sin(t / 1.5)) / 10
-  })
+    const t = state.clock.getElapsedTime();
+    ref.current.rotation.set(
+      Math.cos(t / 4) / 8,
+      Math.sin(t / 4) / 8,
+      -0.2 - (1 + Math.sin(t / 1.5)) / 20
+    );
+    ref.current.position.y = (1 + Math.sin(t / 1.5)) / 10;
+  });
 
   useEffect(() => {
-    const cursorSvg = `<svg width=\"64\" height=\"64\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g clip-path=\"url(#clip0)\"><path fill=\"rgba(255,255,255,0.5)\" d=\"M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z\" stroke=\"#000\"/></g></svg>`
-    const defaultSvg = `<svg width=\"64\" height=\"64\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"rgba(255,255,255,0.5)\" d=\"M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z\" stroke=\"#000\"/></svg>`
+    const cursorSvg = `<svg width=\"64\" height=\"64\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g clip-path=\"url(#clip0)\"><path fill=\"rgba(255,255,255,0.5)\" d=\"M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z\" stroke=\"#000\"/></g></svg>`;
+    const defaultSvg = `<svg width=\"64\" height=\"64\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"rgba(255,255,255,0.5)\" d=\"M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z\" stroke=\"#000\"/></svg>`;
     if (hovered) {
-      document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(cursorSvg)}'), auto`
+      document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(
+        cursorSvg
+      )}'), auto`;
       return () => {
-        document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(defaultSvg)}'), auto`
-      }
+        document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(
+          defaultSvg
+        )}'), auto`;
+      };
     }
-  }, [hovered])
+  }, [hovered]);
 
   useEffect(() => {
-    const handleUp = () => setDragging(false)
-    window.addEventListener("pointerup", handleUp)
-    return () => window.removeEventListener("pointerup", handleUp)
-  }, [])
+    const handleUp = () => setDragging(false);
+    window.addEventListener("pointerup", handleUp);
+    return () => window.removeEventListener("pointerup", handleUp);
+  }, []);
 
-  const shouldApplyDecal = (partKey) => partKey === snap.decalTarget
+  const shouldApplyDecal = (partKey) => partKey === snap.decalTarget;
 
   const handlePointerMove = (e) => {
     if (!dragging || !snap.decalMovementEnabled) return; // Check if decal movement is enabled
     e.stopPropagation();
-    const localPoint = e.object.worldToLocal(e.point.clone())
-    state.decalTransform.position = [localPoint.x, localPoint.y, localPoint.z]
-  }
+    const localPoint = e.object.worldToLocal(e.point.clone());
+    state.decalTransform.position = [localPoint.x, localPoint.y, localPoint.z];
+  };
 
   const handlePointerDown = (e) => {
-    if (e.button !== 0) return
-    if (e.object.name === snap.decalTarget) { // Check the mesh's name
-      e.stopPropagation()
-      setDragging(true)
+    if (e.button !== 0) return;
+    if (e.object.name === snap.decalTarget) {
+      // Check the mesh's name
+      e.stopPropagation();
+      setDragging(true);
     }
-  }
+  };
 
   // Add this useEffect for debugging
   useEffect(() => {
-    console.log("Available nodes:", Object.keys(nodes))
-    console.log("Available materials:", Object.keys(materials))
-  }, [nodes, materials])
+    console.log("Available nodes:", Object.keys(nodes));
+    console.log("Available materials:", Object.keys(materials));
+  }, [nodes, materials]);
 
   return (
     <group
       ref={ref}
       onPointerOver={(e) => {
-        e.stopPropagation()
-        setHovered(e.object.name || e.object.material.name)
+        e.stopPropagation();
+        setHovered(e.object.name || e.object.material.name);
       }}
       onPointerOut={(e) => {
         if (e.intersections.length === 0) {
-          setHovered(null)
+          setHovered(null);
         }
       }}
       onPointerMissed={() => {
-        state.current = null
-        state.outlinedMesh = null // Clear the outline when clicking outside
+        state.current = null;
+        state.outlinedMesh = null; // Clear the outline when clicking outside
       }}
       onClick={(e) => {
-        e.stopPropagation()
-        const meshName = e.object.name || e.object.material.name
-        state.current = meshName
-        state.selectedMesh = meshName
-        state.outlinedMesh = meshName // Set the outlined mesh
+        e.stopPropagation();
+        const meshName = e.object.name || e.object.material.name;
+        state.current = meshName;
+        state.selectedMesh = meshName;
+        state.outlinedMesh = meshName; // Set the outlined mesh
       }}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}>
+      onPointerMove={handlePointerMove}
+    >
       {Object.entries(nodes)
-        .filter(([key]) => typeof nodes[key].geometry !== 'undefined')
+        .filter(([key]) => typeof nodes[key].geometry !== "undefined")
         .map(([key, node]) => {
-          // If this mesh is the selected target, use node.material 
-          // (which may have been cloned and updated in the effect)
-          const material = key === snap.decalTarget && node.material
-            ? node.material
-            : materials[node.material?.name || key];
+          const material =
+            key === snap.decalTarget && node.material
+              ? node.material
+              : materials[node.material?.name || key];
 
           if (!material) {
             return null;
@@ -428,7 +530,8 @@ function Model3D() {
               material-color={snap.items[key]}
               material-envMapIntensity={0.8}
               material-roughness={0.7}
-              material-metalness={0.2}>
+              material-metalness={0.2}
+            >
               {key === snap.decalTarget && (
                 <Decal
                   mesh={node}
@@ -443,7 +546,7 @@ function Model3D() {
           );
         })}
     </group>
-  )
+  );
 }
 
 function Picker() {
@@ -928,11 +1031,6 @@ function LightingControls() {
         <label style={{ display: "block", marginBottom: "4px" }}>
           Far:
           <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.1}
-            value={snap.shadows.far}
             onChange={(e) => {
               state.shadows.far = parseFloat(e.target.value)
             }}
@@ -1270,166 +1368,7 @@ function MaterialPresetPicker() {
   )
 }
 
-function TextureControls() {
-  const snap = useSnapshot(state)
-  const currentPreset = materialPresets[snap.materialPreset.current]
 
-  const updateTextureProperty = (mapType, property, value) => {
-    if (!currentPreset || !currentPreset.textures[mapType] || !snap.materials) return
-
-    // Use materials from state instead of global materials
-    Object.values(snap.materials).forEach(material => {
-      const textureMap = material[getTextureMapProperty(mapType)]
-      if (textureMap) {
-        switch (property) {
-          case 'repeatX':
-            textureMap.repeat.x = parseFloat(value)
-            break
-          case 'repeatY':
-            textureMap.repeat.y = parseFloat(value)
-            break
-          case 'offsetX':
-            textureMap.offset.x = parseFloat(value)
-            break
-          case 'offsetY':
-            textureMap.offset.y = parseFloat(value)
-            break
-          case 'rotation':
-            textureMap.rotation = parseFloat(value)
-            break
-          case 'intensity':
-            if (mapType === 'emissive') {
-              material.emissiveIntensity = parseFloat(value)
-            }
-            break
-        }
-        textureMap.needsUpdate = true
-      }
-    })
-  }
-
-  const getTextureMapProperty = (mapType) => {
-    switch (mapType) {
-      case 'color': return 'map'
-      case 'normal': return 'normalMap'
-      case 'roughness': return 'roughnessMap'
-      case 'metallic': return 'metalnessMap'
-      case 'height': return 'heightMap'
-      case 'emissive': return 'emissiveMap'
-      case 'ao': return 'aoMap'
-      default: return mapType
-    }
-  }
-
-  useEffect(() => {
-    if (!snap.materials) {
-      console.warn('Materials not yet loaded into state')
-    }
-  }, [snap.materials])
-
-  const TextureControl = ({ mapType, label }) => (
-    <div style={{ marginBottom: "16px" }}>
-      <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>{label}</h3>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Repeat X:
-        <input
-          type="range"
-          min={0.1}
-          max={10}
-          step={0.1}
-          defaultValue={1}
-          onChange={(e) => updateTextureProperty(mapType, 'repeatX', e.target.value)}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Repeat Y:
-        <input
-          type="range"
-          min={0.1}
-          max={10}
-          step={0.1}
-          defaultValue={1}
-          onChange={(e) => updateTextureProperty(mapType, 'repeatY', e.target.value)}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Offset X:
-        <input
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          defaultValue={0}
-          onChange={(e) => updateTextureProperty(mapType, 'offsetX', e.target.value)}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Offset Y:
-        <input
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          defaultValue={0}
-          onChange={(e) => updateTextureProperty(mapType, 'offsetY', e.target.value)}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Rotation:
-        <input
-          type="range"
-          min={0}
-          max={Math.PI * 2}
-          step={0.01}
-          defaultValue={0}
-          onChange={(e) => updateTextureProperty(mapType, 'rotation', e.target.value)}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      {mapType === 'emissive' && (
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Emission Intensity:
-          <input
-            type="range"
-            min={0}
-            max={5}
-            step={0.1}
-            defaultValue={1}
-            onChange={(e) => updateTextureProperty(mapType, 'intensity', e.target.value)}
-            style={{ width: "100%", marginTop: "4px" }}
-          />
-        </label>
-      )}
-    </div>
-  )
-
-  return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      left: "500px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px",
-      maxWidth: "320px",
-      maxHeight: "80vh",
-      overflowY: "auto"
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Texture Controls</h2>
-      {currentPreset && Object.entries(currentPreset.textures).map(([mapType, _]) => (
-        <TextureControl
-          key={mapType}
-          mapType={mapType}
-          label={mapType.charAt(0).toUpperCase() + mapType.slice(1) + ' Map'}
-        />
-      ))}
-    </div>
-  )
-}
 
 function CameraController() {
   const { camera } = useThree()

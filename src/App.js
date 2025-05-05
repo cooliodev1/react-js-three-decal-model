@@ -69,7 +69,8 @@ const state = proxy({
       'nylon-webbing': ''  // Added new preset placeholder
     }
   },
-  cameraDistance: 4  // new state for camera zoom
+  cameraDistance: 4,  // new state for camera zoom
+  decalMovementEnabled: true,  // new property to control decal movement
 })
 
 // Add material definitions for different styles
@@ -317,8 +318,8 @@ function Model3D() {
   const shouldApplyDecal = (partKey) => partKey === snap.decalTarget
 
   const handlePointerMove = (e) => {
-    if (!dragging) return
-    e.stopPropagation()
+    if (!dragging || !snap.decalMovementEnabled) return; // Check if decal movement is enabled
+    e.stopPropagation();
     const localPoint = e.object.worldToLocal(e.point.clone())
     state.decalTransform.position = [localPoint.x, localPoint.y, localPoint.z]
   }
@@ -452,16 +453,15 @@ function DecalControls() {
   }
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: "20px",
-        left: "20px",
-        background: "rgba(255,255,255,0.9)",
-        padding: "10px",
-        borderRadius: "4px",
-        maxWidth: "320px",
-      }}>
+    <div style={{
+      position: "absolute",
+      bottom: "20px",
+      left: "20px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px",
+      maxWidth: "320px",
+    }}>
       <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Decal Transform Controls</h2>
       <label style={{ display: "block", marginBottom: "4px" }}>
         Enable Bouncing Animation:
@@ -469,6 +469,15 @@ function DecalControls() {
           type="checkbox" 
           checked={snap.animationEnabled} 
           onChange={toggleAnimation} 
+          style={{ marginLeft: "8px" }} 
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Enable Decal Movement:
+        <input 
+          type="checkbox" 
+          checked={snap.decalMovementEnabled} 
+          onChange={(e) => { state.decalMovementEnabled = e.target.checked }} 
           style={{ marginLeft: "8px" }} 
         />
       </label>

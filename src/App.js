@@ -63,9 +63,9 @@ export const state = proxy({
   },
   materials: null, // Add this line
   materialPreset: {
-    current: 'blacky',  // Default preset
+    current: 'cotton-jersey-grey',  // Default preset
     colors: {
-      'blacky': '',
+      'cotton-jersey-grey': '',
       'cotton-tricotine': '',  // Added new preset placeholder
       'nylon-webbing': ''  // Added new preset placeholder
     },
@@ -75,7 +75,7 @@ export const state = proxy({
   decalMovementEnabled: true,  // new property to control decal movement
   selectedMesh: null, // Add this line
   outlinedMesh: null, // Add this line
-  currentModel: "hoodie.glb", // Default model
+  currentModel: "hoodie2.glb", // Default model
 })
 
 const materialPresets = {
@@ -88,7 +88,7 @@ const materialPresets = {
       roughness: '/cotton-tricotine/cotton-tricotine_Roughness.png',
       ao: '/cotton-tricotine/cotton-tricotine_AmbientOcclusion.png',
       metallic: '/cotton-tricotine/cotton-tricotine_Metallic.png',
-      opacity: '/cotton-tricotine/cotton-tricotine_Opacity.png',
+      // opacity: '/cotton-tricotine/cotton-tricotine_Opacity.png',
     },
   },
   'blue-turbo': {
@@ -100,19 +100,19 @@ const materialPresets = {
       roughness: '/blue-turbo-acryllic/blue-turbo-acryllic_Roughness.png',
       ao: '/blue-turbo-acryllic/blue-turbo-acryllic_AmbientOcclusion.png',
       metallic: '/blue-turbo-acryllic/blue-turbo-acryllic_Metallic.png',
-      opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
+      // opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
     },
   },
-  'blacky': {
-    name: 'blacky',
+  'cotton-jersey-grey': {
+    name: 'Cotton Jersey Grey',
     textures: {
-      baseColor: '/black-acryllic-lines/black-acryllic-lines_BaseColor.png',
-      height: '/black-acryllic-lines/black-acryllic-lines_Height.png',
-      normal: '/black-acryllic-lines/black-acryllic-lines_Normal.png',
-      roughness: '/black-acryllic-lines/black-acryllic-lines_Roughness.png',
-      ao: '/black-acryllic-lines/black-acryllic-lines_AmbientOcclusion.png',
-      metallic: '/black-acryllic-lines/black-acryllic-lines_Metallic.png',
-      opacity: '/black-acryllic-lines/black-acryllic-lines_Opacity.png',
+      baseColor: '/cotton-jersey-grey/col.png',
+      height: '/cotton-jersey-grey/col.png',
+      normal: '/cotton-jersey-grey/col.png',
+      roughness: '/cotton-jersey-grey/col.png',
+      // ao: '/cotton-jersey-grey/col.png',
+      metallic: '/cotton-jersey-grey/col.png',
+      // opacity: '/cotton-jersey-grey/col.png',
     },
   },
   'nylon-webbing': {
@@ -122,9 +122,9 @@ const materialPresets = {
       height: '/nylon-webbing/nylon-webbing_Height.png',
       normal: '/nylon-webbing/nylon-webbing_Normal.png',
       roughness: '/nylon-webbing/nylon-webbing_Roughness.png',
-      ao: '/nylon-webbing/nylon-webbing_AmbientOcclusion.png',
-      metallic: '/nylon-webbing/nylon-webbing_Metallic.png',
-      opacity: '/nylon-webbing/nylon-webbing_Opacity.png',
+      // ao: '/nylon-webbing/nylon-webbing_AmbientOcclusion.png',
+      // metallic: '/nylon-webbing/nylon-webbing_Metallic.png',
+      // opacity: '/nylon-webbing/nylon-webbing_Opacity.png',
     },
   }
 }

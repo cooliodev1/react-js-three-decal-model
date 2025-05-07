@@ -107,12 +107,12 @@ const materialPresets = {
     name: 'Cotton Jersey Grey',
     textures: {
       baseColor: '/cotton-jersey-grey/col.png',
-      height: '/cotton-jersey-grey/col.png',
+      height: '/cotton-jersey-grey/height.png',
       normal: '/cotton-jersey-grey/col.png',
-      roughness: '/cotton-jersey-grey/col.png',
-      // ao: '/cotton-jersey-grey/col.png',
-      metallic: '/cotton-jersey-grey/col.png',
-      // opacity: '/cotton-jersey-grey/col.png',
+      roughness: '/cotton-jersey-grey/roughness.png',
+      ao: '/cotton-jersey-grey/ao.png',
+      metallic: '/cotton-jersey-grey/metallic.png',
+      opacity: '/cotton-jersey-grey/opacity.png',
     },
   },
   'nylon-webbing': {

@@ -9,6 +9,7 @@ import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add
 // Change the state declaration to export it
 export const state = proxy({
   textureScale: 1, // Add this line - default scale is 1
+  displacementFactor: 0, // Add this line - default displacement is 0
   current: null,
   items: {}, // Will be populated with materials from GLB
   decalTransform: {
@@ -389,8 +390,11 @@ function Model3D() {
               targetMaterial.metalnessMap = loadedTextures.metallic;
             if (loadedTextures.ao)
               targetMaterial.aoMap = loadedTextures.ao;
-            if (loadedTextures.height)
-              targetMaterial.heightMap = loadedTextures.height;
+            if (loadedTextures.height) {
+              targetMaterial.displacementMap = loadedTextures.height;
+              targetMaterial.displacementScale = snap.displacementFactor;
+              targetMaterial.displacementBias = 0;
+            }
             if (loadedTextures.emissive)
               targetMaterial.emissiveMap = loadedTextures.emissive;
             targetMaterial.needsUpdate = true;
@@ -419,8 +423,11 @@ function Model3D() {
             material.metalnessMap = loadedTextures.metallic;
           if (loadedTextures.ao)
             material.aoMap = loadedTextures.ao;
-          if (loadedTextures.height)
-            material.heightMap = loadedTextures.height;
+          if (loadedTextures.height) {
+            material.displacementMap = loadedTextures.height;
+            material.displacementScale = snap.displacementFactor;
+            material.displacementBias = 0;
+          }
           if (loadedTextures.emissive)
             material.emissiveMap = loadedTextures.emissive;
           material.needsUpdate = true;
@@ -554,6 +561,8 @@ function Model3D() {
               material-envMapIntensity={0.8}
               material-roughness={0.7}
               material-metalness={0.2}
+              segments={32}
+              subdivisions={3}
             >
               {key === snap.decalTarget && (
                 <Decal
@@ -1375,32 +1384,65 @@ function MaterialPresetPicker() {
         />
         Apply to target mesh only
       </label>
-      <label style={{ 
-        display: "block", 
-        marginBottom: "12px",
-        fontSize: "14px"
+      <div style={{
+        display: "flex",
+        gap: "16px",
+        marginBottom: "12px"
       }}>
-        Texture Scale (x):
-        <input 
-          type="range"
-          min={0.25}
-          max={4}
-          step={0.25}
-          value={snap.textureScale}
-          onChange={updateTextureScale}
-          style={{ 
-            width: "100%", 
-            marginTop: "8px"
-          }}
-        />
-        <span style={{ 
-          display: "block", 
-          textAlign: "center", 
-          fontSize: "12px" 
+        <label style={{ 
+          flex: 1,
+          fontSize: "14px"
         }}>
-          {snap.textureScale}x
-        </span>
-      </label>
+          Texture Scale (x):
+          <input 
+            type="range"
+            min={0.25}
+            max={4}
+            step={0.25}
+            value={snap.textureScale}
+            onChange={updateTextureScale}
+            style={{ 
+              width: "100%", 
+              marginTop: "8px"
+            }}
+          />
+          <span style={{ 
+            display: "block", 
+            textAlign: "center", 
+            fontSize: "12px" 
+          }}>
+            {snap.textureScale}x
+          </span>
+        </label>
+
+        <label style={{ 
+          flex: 1,
+          fontSize: "14px"
+        }}>
+          Displacement:
+          <input 
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={snap.displacementFactor}
+            onChange={(e) => {
+              state.displacementFactor = parseFloat(e.target.value);
+            }}
+            style={{ 
+              width: "100%", 
+              marginTop: "8px"
+            }}
+          />
+          <span style={{ 
+            display: "block", 
+            textAlign: "center", 
+            fontSize: "12px" 
+          }}>
+            {snap.displacementFactor.toFixed(2)}
+          </span>
+        </label>
+      </div>
       <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
         {Object.entries(materialPresets).map(([key, preset]) => (
           <button

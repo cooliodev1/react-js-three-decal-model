@@ -16,6 +16,9 @@ export const state = proxy({
     position: [0, 0.1, 0.5],
     rotation: [0, 0, 0],
     scale: 0.3,
+    polygonOffset: 0,
+    roughness: 0.5,
+    opacity: 0.95
   },
   decalTarget: "", // Will be set to first material found
   orbitEnabled: true,
@@ -571,7 +574,19 @@ function Model3D() {
                   rotation={snap.decalTransform.rotation}
                   scale={snap.decalTransform.scale}
                   map={decalTexture}
-                  flat
+                  map-anisotropy={16}
+                  renderOrder={10}
+                  depthTest={true}
+                  depthWrite={false}
+                  meshPhysicalMaterial={{
+                    transparent: true,
+                    opacity: snap.decalTransform.opacity,
+                    roughness: snap.decalTransform.roughness,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -snap.decalTransform.polygonOffset,
+                    polygonOffsetUnits: -1,
+                    side: 2
+                  }}
                 />
               )}
             </mesh>
@@ -730,6 +745,48 @@ function DecalControls() {
           value={snap.decalTransform.scale}
           onChange={(e) => {
             state.decalTransform.scale = parseFloat(e.target.value)
+          }}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Decal Height Offset:
+        <input
+          type="range"
+          min={-50}  // Increased range
+          max={50}   // Allow positive values
+          step={0.1}
+          value={snap.decalTransform.polygonOffset}
+          onChange={(e) => {
+            state.decalTransform.polygonOffset = parseFloat(e.target.value)
+          }}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Decal Roughness:
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={snap.decalTransform.roughness}
+          onChange={(e) => {
+            state.decalTransform.roughness = parseFloat(e.target.value)
+          }}
+          style={{ width: "100%", marginTop: "4px" }}
+        />
+      </label>
+      <label style={{ display: "block", marginBottom: "4px" }}>
+        Decal Opacity:
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={snap.decalTransform.opacity || 0.95}
+          onChange={(e) => {
+            state.decalTransform.opacity = parseFloat(e.target.value)
           }}
           style={{ width: "100%", marginTop: "4px" }}
         />

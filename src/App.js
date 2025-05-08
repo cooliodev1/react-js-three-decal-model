@@ -2,12 +2,13 @@ import { useRef, useState, useEffect } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber" // added useThree
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
 import { proxy, useSnapshot } from "valtio"
-import { MOUSE, PCFSoftShadowMap, Color, TextureLoader } from "three"
+import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, RepeatWrapping } from "three"
 import { HexColorPicker } from "react-colorful"
 import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add this import
 
 // Change the state declaration to export it
 export const state = proxy({
+  textureScale: 1, // Add this line - default scale is 1
   current: null,
   items: {}, // Will be populated with materials from GLB
   decalTransform: {
@@ -79,15 +80,23 @@ export const state = proxy({
 })
 
 const materialPresets = {
+  'leather-quilted': {
+    name: 'Leather Quilted',
+    textures: {
+      baseColor: '/leather-quilted/col.png',
+      normal: '/leather-quilted/normals.png',
+      height: '/leather-quilted/displacement.png',
+    },
+  },
   'cotton-tricotine': {
     name: 'Cotton Tricotine',
     textures: {
       baseColor: '/cotton-tricotine/cotton-tricotine_BaseColor.png',
-      height: '/cotton-tricotine/cotton-tricotine_Height.png',
+      // height: '/cotton-tricotine/cotton-tricotine_Height.png',
       normal: '/cotton-tricotine/cotton-tricotine_Normal.png',
-      roughness: '/cotton-tricotine/cotton-tricotine_Roughness.png',
-      ao: '/cotton-tricotine/cotton-tricotine_AmbientOcclusion.png',
-      metallic: '/cotton-tricotine/cotton-tricotine_Metallic.png',
+      // roughness: '/cotton-tricotine/cotton-tricotine_Roughness.png',
+      // ao: '/cotton-tricotine/cotton-tricotine_AmbientOcclusion.png',
+      // metallic: '/cotton-tricotine/cotton-tricotine_Metallic.png',
       // opacity: '/cotton-tricotine/cotton-tricotine_Opacity.png',
     },
   },
@@ -95,11 +104,11 @@ const materialPresets = {
     name: 'Blue Turbo',
     textures: {
       baseColor: '/blue-turbo-acryllic/blue-turbo-acryllic_BaseColor.png',
-      height: '/blue-turbo-acryllic/blue-turbo-acryllic_Height.png',
+      // height: '/blue-turbo-acryllic/blue-turbo-acryllic_Height.png',
       normal: '/blue-turbo-acryllic/blue-turbo-acryllic_Normal.png',
-      roughness: '/blue-turbo-acryllic/blue-turbo-acryllic_Roughness.png',
-      ao: '/blue-turbo-acryllic/blue-turbo-acryllic_AmbientOcclusion.png',
-      metallic: '/blue-turbo-acryllic/blue-turbo-acryllic_Metallic.png',
+      // roughness: '/blue-turbo-acryllic/blue-turbo-acryllic_Roughness.png',
+      // ao: '/blue-turbo-acryllic/blue-turbo-acryllic_AmbientOcclusion.png',
+      // metallic: '/blue-turbo-acryllic/blue-turbo-acryllic_Metallic.png',
       // opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
     },
   },
@@ -107,21 +116,21 @@ const materialPresets = {
     name: 'Cotton Jersey Grey',
     textures: {
       baseColor: '/cotton-jersey-grey/col.png',
-      height: '/cotton-jersey-grey/height.png',
-      normal: '/cotton-jersey-grey/col.png',
-      roughness: '/cotton-jersey-grey/roughness.png',
-      ao: '/cotton-jersey-grey/ao.png',
-      metallic: '/cotton-jersey-grey/metallic.png',
-      opacity: '/cotton-jersey-grey/opacity.png',
+      // height: '/cotton-jersey-grey/height.png',
+      normal: '/cotton-jersey-grey/normal.png',
+      // roughness: '/cotton-jersey-grey/roughness.png',
+      // ao: '/cotton-jersey-grey/ao.png',
+      // metallic: '/cotton-jersey-grey/metallic.png',
+      // opacity: '/cotton-jersey-grey/opacity.png',
     },
   },
   'nylon-webbing': {
     name: 'Nylon Webbing',
     textures: {
       baseColor: '/nylon-webbing/nylon-webbing_BaseColor.png',
-      height: '/nylon-webbing/nylon-webbing_Height.png',
+      // height: '/nylon-webbing/nylon-webbing_Height.png',
       normal: '/nylon-webbing/nylon-webbing_Normal.png',
-      roughness: '/nylon-webbing/nylon-webbing_Roughness.png',
+      // roughness: '/nylon-webbing/nylon-webbing_Roughness.png',
       // ao: '/nylon-webbing/nylon-webbing_AmbientOcclusion.png',
       // metallic: '/nylon-webbing/nylon-webbing_Metallic.png',
       // opacity: '/nylon-webbing/nylon-webbing_Opacity.png',
@@ -363,6 +372,13 @@ function Model3D() {
           if (sharedMaterial) {
             // Clone the material so that changes affect only this mesh
             const targetMaterial = sharedMaterial.clone();
+            Object.values(loadedTextures).forEach(texture => {
+              if (texture) {
+                texture.repeat.setScalar(snap.textureScale);
+                texture.wrapS = texture.wrapT = RepeatWrapping;
+                texture.needsUpdate = true;
+              }
+            });
             if (loadedTextures.baseColor)
               targetMaterial.map = loadedTextures.baseColor;
             if (loadedTextures.normal)
@@ -386,6 +402,13 @@ function Model3D() {
       } else {
         // Apply to all materials
         Object.values(materials).forEach(material => {
+          Object.values(loadedTextures).forEach(texture => {
+            if (texture) {
+              texture.repeat.setScalar(snap.textureScale);
+              texture.wrapS = texture.wrapT = RepeatWrapping;
+              texture.needsUpdate = true;
+            }
+          });
           if (loadedTextures.baseColor)
             material.map = loadedTextures.baseColor;
           if (loadedTextures.normal)
@@ -1324,6 +1347,11 @@ function MaterialPresetPicker() {
     state.materialPreset.applyToTargetOnly = e.target.checked
   }
 
+  const updateTextureScale = (e) => {
+    const newScale = parseFloat(e.target.value);
+    state.textureScale = newScale;
+  };
+
   return (
     <div style={{
       position: "absolute",
@@ -1346,6 +1374,32 @@ function MaterialPresetPicker() {
           style={{ marginRight: "8px" }}
         />
         Apply to target mesh only
+      </label>
+      <label style={{ 
+        display: "block", 
+        marginBottom: "12px",
+        fontSize: "14px"
+      }}>
+        Texture Scale (x):
+        <input 
+          type="range"
+          min={0.25}
+          max={4}
+          step={0.25}
+          value={snap.textureScale}
+          onChange={updateTextureScale}
+          style={{ 
+            width: "100%", 
+            marginTop: "8px"
+          }}
+        />
+        <span style={{ 
+          display: "block", 
+          textAlign: "center", 
+          fontSize: "12px" 
+        }}>
+          {snap.textureScale}x
+        </span>
       </label>
       <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
         {Object.entries(materialPresets).map(([key, preset]) => (

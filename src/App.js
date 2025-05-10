@@ -91,12 +91,33 @@ export const state = proxy({
     },
       lodThresholds: {
       lod0: 1,    // Use highest quality when closer than 3 units
-      lod1: 3,    // Use high quality between 3-5 units
-      lod2: 7,    // Use medium quality between 5-7 units
-      lod3: 5,  // Use lowest quality when further than 7 units
+      lod1: 6,    // Use high quality between 3-5 units
+      lod2: 10,    // Use medium quality between 5-7 units
+      lod3: 21,  // Use lowest quality when further than 7 units
     }
   }
 })
+
+
+function CameraDistanceOverlay() {
+  const snap = useSnapshot(state);
+  return (
+    <div style={{
+      position: "absolute",
+      top: "60px",
+      left: "520px",
+      background: "rgba(0, 0, 0, 0.6)",
+      color: "#fff",
+      padding: "6px 12px",
+      fontSize: "14px",
+      borderRadius: "4px",
+      pointerEvents: "none"
+    }}>
+      Distance: {snap.cameraDistance.toFixed(2)}
+    </div>
+  );
+}
+
 
 // Add this new component in App.js
 function LODController() {
@@ -319,16 +340,20 @@ export default function App() {
           enableZoom={true}
           enablePan={false}
           mouseButtons={{
-            LEFT: MOUSE.PAN,
-            RIGHT: MOUSE.ROTATE,
-            MIDDLE: MOUSE.DOLLY,
+            RIGHT:  MOUSE.ROTATE, // left-drag now orbits
+            MIDDLE:MOUSE.DOLLY,  // middle-drag zooms
           }}
           minDistance={2}
-          maxDistance={10}
-          minPolarAngle={Math.PI / 2}
-          maxPolarAngle={Math.PI / 2}
+          maxDistance={999}
+          minPolarAngle={0}
+          maxPolarAngle={Math.PI}
+          onChange={e => {
+            // e.target.object is the camera
+            const cam = e.target.object
+            state.cameraDistance = cam.position.distanceTo(new Vector3(0, 0, 0))
+          }}
         />
-        <CameraController />
+        {/* <CameraController /> */}
         <OutlineEffect />
        
       </Canvas>
@@ -341,6 +366,7 @@ export default function App() {
       <MeshListPanel />
       <ModelSwitcher />
       <LODControls />
+      <CameraDistanceOverlay /> 
 
     </>
   )

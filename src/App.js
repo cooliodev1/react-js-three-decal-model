@@ -385,10 +385,16 @@ function ModelSwitcher() {
       name: "new_model",
       lod: 0,
       paths: {
-      lod0: "/hoodie-lod0.gltf",
-      lod1: "/hoodie-lod1.gltf",
-      lod2: "/hoodie-lod1.gltf",
-      lod3: "/hoodie-lod1.gltf"
+        lod0: "/hoodie-flat-lod0.gltf",
+        lod1: "/hoodie-flat-lod0.gltf",
+        lod2: "/hoodie-flat-lod0.gltf",
+        lod3: "/hoodie-flat-lod0.gltf"
+      },
+      lodThresholds: {
+        lod0: 15,
+        lod1: 44,
+        lod2: 55,
+        lod3: 66
       }
     };
     state.currentModel = newModel;

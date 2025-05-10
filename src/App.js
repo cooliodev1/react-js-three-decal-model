@@ -2,18 +2,22 @@ import { useRef, useState, useEffect } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
 import { proxy, useSnapshot } from "valtio"
-import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, Vector3, RepeatWrapping } from "three" // Added Vector3
+import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, Vector3, RepeatWrapping } from "three"
 import { HexColorPicker } from "react-colorful"
-import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add this import
+import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"
+import { useSpring, a } from "@react-spring/three" // Add this import
 
+// Preload all LOD models at startup 
+useGLTF.preload("/hoodie-lod0.gltf")
+useGLTF.preload("/hoodie-lod1.gltf")
+useGLTF.preload("/hoodie-lod2.gltf")
 
-// Change the state declaration to export it
 export const state = proxy({
-  textureScale: 1, // Add this line - default scale is 1
-  displacementFactor: 0, // Add this line - default displacement is 0
+  textureScale: 1,
+  displacementFactor: 0,
   current: null,
-  items: {}, // Will be populated with materials from GLB
+  items: {},
   decalTransform: {
     position: [0, 0.1, 0.5],
     rotation: [0, 0, 0],
@@ -22,13 +26,13 @@ export const state = proxy({
     roughness: 0.5,
     opacity: 0.95
   },
-  decalTarget: "", // Will be set to first material found
+  decalTarget: "",
   orbitEnabled: true,
-  animationEnabled: true, // Add this line
+  animationEnabled: true,
   lights: {
     ambient: {
       intensity: 0.07,
-      position: [0, 5, 0] // Add ambient light position
+      position: [0, 5, 0]
     },
     spot: {
       intensity: 0.5,
@@ -61,64 +65,56 @@ export const state = proxy({
     far: 0.8
   },
   presets: {
-    saved: [], // Will store saved presets
-    current: null // Currently selected preset
+    saved: [],
+    current: null
   },
   video: {
     recordings: [],
     isRecording: false
   },
-  materials: null, // Add this line
+  materials: null,
   materialPreset: {
-    current: 'cotton-jersey-grey',  // Default preset
+    current: 'cotton-jersey-grey',
     colors: {
       'cotton-jersey-grey': '',
-      'cotton-tricotine': '',  // Added new preset placeholder
-      'nylon-webbing': ''  // Added new preset placeholder
+      'cotton-tricotine': '',
+      'nylon-webbing': ''
     },
-    applyToTargetOnly: false  // Add this line
+    applyToTargetOnly: false
   },
-  cameraDistance: 4,  // new state for camera zoom
-  decalMovementEnabled: true,  // new property to control decal movement
-  selectedMesh: null, // Add this line
-  outlinedMesh: null, // Add this line
+  cameraDistance: 4,
+  decalMovementEnabled: true,
+  selectedMesh: null,
+  outlinedMesh: null,
   currentModel: {
     name: "hoodie0",
-    lod: 0,  // Current LOD level
+    lod: 0,
     paths: {
-      lod0: "/hoodie-lod0.gltf",     // Highest quality
-      lod1: "/hoodie-lod1.gltf", // High quality
-      lod2: "/hoodie-lod2.gltf", // Medium quality
-      lod3: "/hoodie-lod2.gltf"  // Low quality
+      lod0: "/hoodie-lod0.gltf",
+      lod1: "/hoodie-lod1.gltf",
+      lod2: "/hoodie-lod2.gltf",
+      lod3: "/hoodie-lod2.gltf"
     },
-      lodThresholds: {
-      lod0: 15,    // Use highest quality when closer than 3 units
-      lod1: 44,    // Use high quality between 3-5 units
-      lod2: 55,    // Use medium quality between 5-7 units
-      lod3: 66,  // Use lowest quality when further than 7 units
+    lodThresholds: {
+      lod0: 15,
+      lod1: 44,
+      lod2: 55,
+      lod3: 66
     }
   }
 })
 
-
-// preload if you like
-// useGLTF.preload('/hoodie0.glb')
-
 function Model({ url }) {
-  // create/configure DRACOLoader once
   const dracoLoader = new DRACOLoader()
   dracoLoader.setDecoderPath('/draco/')
 
-  // pass it to useGLTF as the second argument
   const { scene } = useGLTF(
     url,
-    // this can be either a path string, or a function to configure the loader
     loader => loader.setDRACOLoader(dracoLoader)
   )
 
   return <primitive object={scene} />
 }
-
 
 function CameraDistanceOverlay() {
   const snap = useSnapshot(state);
@@ -139,19 +135,14 @@ function CameraDistanceOverlay() {
   );
 }
 
-
-// Add this new component in App.js
 function LODController() {
   const { camera } = useThree();
   const snap = useSnapshot(state);
 
   useFrame(() => {
-    // Calculate distance from camera to model center
     const distance = camera.position.distanceTo(new Vector3(0, 0, 0));
-    
-    // Determine appropriate LOD level based on distance
-    let newLOD = 3; // Default to lowest quality
-    
+    let newLOD = 3;
+
     if (distance <= snap.currentModel.lodThresholds.lod0) {
       newLOD = 0;
     } else if (distance <= snap.currentModel.lodThresholds.lod1) {
@@ -160,12 +151,8 @@ function LODController() {
       newLOD = 2;
     } else if (distance > snap.currentModel.lodThresholds.lod3) {
       newLOD = 3;
-    } else if (distance > snap.currentModel.lodThresholds.lod4) {
-      newLOD = 4;
     }
-    // If distance is greater than the last threshold, use the lowest quality
 
-    // Update LOD level if it changed
     if (newLOD !== snap.currentModel.lod) {
       state.currentModel.lod = newLOD;
       console.log(`Switching to LOD ${newLOD} at distance ${distance.toFixed(2)}`);
@@ -175,7 +162,6 @@ function LODController() {
   return null;
 }
 
-// Modify the existing LODControls component
 function LODControls() {
   const snap = useSnapshot(state);
   const [autoLOD, setAutoLOD] = useState(true);
@@ -361,20 +347,18 @@ export default function App() {
           enableZoom={true}
           enablePan={false}
           mouseButtons={{
-            RIGHT:  MOUSE.ROTATE, // left-drag now orbits
-            MIDDLE:MOUSE.DOLLY,  // middle-drag zooms
+            RIGHT:  MOUSE.ROTATE,
+            MIDDLE:MOUSE.DOLLY,
           }}
           minDistance={2}
           maxDistance={999}
           minPolarAngle={0}
           maxPolarAngle={Math.PI}
           onChange={e => {
-            // e.target.object is the camera
             const cam = e.target.object
             state.cameraDistance = cam.position.distanceTo(new Vector3(0, 0, 0))
           }}
         />
-        {/* <CameraController /> */}
         <OutlineEffect />
        
       </Canvas>
@@ -393,7 +377,6 @@ export default function App() {
   )
 }
 
-// Modify the ModelSwitcher component in App.js
 function ModelSwitcher() {
   const snap = useSnapshot(state);
 
@@ -402,10 +385,10 @@ function ModelSwitcher() {
       name: "new_model",
       lod: 0,
       paths: {
-      lod0: "/hoodie-lod0.gltf",     // Highest quality
-      lod1: "/hoodie-lod1.gltf", // High quality
-      lod2: "/hoodie-lod1.gltf", // Medium quality
-      lod3: "/hoodie-lod1.gltf"  // Low quality
+      lod0: "/hoodie-lod0.gltf",
+      lod1: "/hoodie-lod1.gltf",
+      lod2: "/hoodie-lod1.gltf",
+      lod3: "/hoodie-lod1.gltf"
       }
     };
     state.currentModel = newModel;
@@ -444,6 +427,13 @@ function Model3D() {
   const ref = useRef();
   const snap = useSnapshot(state);
   const [currentLoadedModel, setCurrentLoadedModel] = useState(null);
+  const [previousLOD, setPreviousLOD] = useState(snap.currentModel.lod);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const { opacity } = useSpring({
+    opacity: isTransitioning ? 0 : 1,
+    config: { duration: 300 }
+  });
 
   const getCurrentModelPath = () => {
     const lodLevel = `lod${snap.currentModel.lod}`;
@@ -451,42 +441,46 @@ function Model3D() {
   };
 
   useEffect(() => {
-    const currentPath = getCurrentModelPath();
-    console.log("Model change detected:", currentPath);
-    
-    if (currentLoadedModel) {
-      console.log("Cleaning up previous model");
-      currentLoadedModel.traverse((obj) => {
-        if (obj.geometry) {
-          obj.geometry.dispose();
+    if (previousLOD !== snap.currentModel.lod) {
+      setIsTransitioning(true);
+      
+      const timer = setTimeout(() => {
+        const currentPath = getCurrentModelPath();
+        
+        if (currentLoadedModel) {
+          console.log("Cleaning up previous model");
+          currentLoadedModel.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              if (Array.isArray(obj.material)) {
+                obj.material.forEach(mat => mat.dispose());
+              } else {
+                obj.material.dispose();
+              }
+            }
+          });
         }
-        if (obj.material) {
-          if (Array.isArray(obj.material)) {
-            obj.material.forEach(mat => mat.dispose());
-          } else {
-            obj.material.dispose();
+
+        const loadModel = async () => {
+          try {
+            const gltf = await useGLTF(currentPath);
+            setCurrentLoadedModel(gltf.scene);
+            setPreviousLOD(snap.currentModel.lod);
+            
+            setTimeout(() => {
+              setIsTransitioning(false);
+            }, 50);
+          } catch (error) {
+            console.error("Error loading model:", error);
+            setIsTransitioning(false);
           }
-        }
-      });
+        };
+
+        loadModel();
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
-
-    useGLTF.clear(currentPath);
-    
-    const loadModel = async () => {
-      try {
-        const gltf = await useGLTF(currentPath);
-        console.log("New model loaded:", gltf);
-        setCurrentLoadedModel(gltf.scene);
-      } catch (error) {
-        console.error("Error loading model:", error);
-      }
-    };
-
-    loadModel();
-
-    return () => {
-      useGLTF.clear(currentPath);
-    };
   }, [snap.currentModel.lod]);
 
   const { nodes, materials } = useGLTF(getCurrentModelPath());
@@ -661,8 +655,9 @@ function Model3D() {
   }, [nodes, materials]);
 
   return (
-    <group
+    <a.group
       ref={ref}
+      opacity={opacity}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(e.object.name || e.object.material.name);
@@ -738,7 +733,7 @@ function Model3D() {
             </mesh>
           );
         })}
-    </group>
+    </a.group>
   );
 }
 

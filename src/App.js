@@ -86,16 +86,16 @@ export const state = proxy({
     name: "hoodie0",
     lod: 0,  // Current LOD level
     paths: {
-      lod0: "/hoodie0.glb",     // Highest quality
-      lod1: "/hoodie2.glb", // High quality
-      lod2: "/hoodie3.glb", // Medium quality
-      lod3: "/hoodie4.glb"  // Low quality
+      lod0: "/hoodie-lod0.gltf",     // Highest quality
+      lod1: "/hoodie-lod1.gltf", // High quality
+      lod2: "/hoodie-lod2.gltf", // Medium quality
+      lod3: "/hoodie-lod2.gltf"  // Low quality
     },
       lodThresholds: {
-      lod0: 1,    // Use highest quality when closer than 3 units
-      lod1: 15,    // Use high quality between 3-5 units
-      lod2: 25,    // Use medium quality between 5-7 units
-      lod3: 34,  // Use lowest quality when further than 7 units
+      lod0: 15,    // Use highest quality when closer than 3 units
+      lod1: 44,    // Use high quality between 3-5 units
+      lod2: 55,    // Use medium quality between 5-7 units
+      lod3: 66,  // Use lowest quality when further than 7 units
     }
   }
 })
@@ -402,10 +402,10 @@ function ModelSwitcher() {
       name: "new_model",
       lod: 0,
       paths: {
-      lod0: "/hoodie0.glb",     // Highest quality
-      lod1: "/hoodie2.glb", // High quality
-      lod2: "/hoodie3.glb", // Medium quality
-      lod3: "/hoodie4.glb"  // Low quality
+      lod0: "/hoodie-lod0.gltf",     // Highest quality
+      lod1: "/hoodie-lod1.gltf", // High quality
+      lod2: "/hoodie-lod1.gltf", // Medium quality
+      lod3: "/hoodie-lod1.gltf"  // Low quality
       }
     };
     state.currentModel = newModel;

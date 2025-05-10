@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from "react"
-import { Canvas, useFrame, useThree } from "@react-three/fiber" // added useThree
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@react-three/drei"
 import { proxy, useSnapshot } from "valtio"
-import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, RepeatWrapping } from "three"
+import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, Vector3, RepeatWrapping } from "three" // Added Vector3
 import { HexColorPicker } from "react-colorful"
 import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add this import
 
@@ -80,8 +80,127 @@ export const state = proxy({
   decalMovementEnabled: true,  // new property to control decal movement
   selectedMesh: null, // Add this line
   outlinedMesh: null, // Add this line
-  currentModel: "hoodie2.glb", // Default model
+  currentModel: {
+    name: "hoodie0",
+    lod: 0,  // Current LOD level
+    paths: {
+      lod0: "/hoodie0.glb",     // Highest quality
+      lod1: "/hoodie2.glb", // High quality
+      lod2: "/hoodie3.glb", // Medium quality
+      lod3: "/hoodie4.glb"  // Low quality
+    },
+      lodThresholds: {
+      lod0: 1,    // Use highest quality when closer than 3 units
+      lod1: 3,    // Use high quality between 3-5 units
+      lod2: 7,    // Use medium quality between 5-7 units
+      lod3: 5,  // Use lowest quality when further than 7 units
+    }
+  }
 })
+
+// Add this new component in App.js
+function LODController() {
+  const { camera } = useThree();
+  const snap = useSnapshot(state);
+
+  useFrame(() => {
+    // Calculate distance from camera to model center
+    const distance = camera.position.distanceTo(new Vector3(0, 0, 0));
+    
+    // Determine appropriate LOD level based on distance
+    let newLOD = 3; // Default to lowest quality
+    
+    if (distance <= snap.currentModel.lodThresholds.lod0) {
+      newLOD = 0;
+    } else if (distance <= snap.currentModel.lodThresholds.lod1) {
+      newLOD = 1;
+    } else if (distance <= snap.currentModel.lodThresholds.lod2) {
+      newLOD = 2;
+    } else if (distance > snap.currentModel.lodThresholds.lod3) {
+      newLOD = 3;
+    } else if (distance > snap.currentModel.lodThresholds.lod4) {
+      newLOD = 4;
+    }
+    // If distance is greater than the last threshold, use the lowest quality
+
+    // Update LOD level if it changed
+    if (newLOD !== snap.currentModel.lod) {
+      state.currentModel.lod = newLOD;
+      console.log(`Switching to LOD ${newLOD} at distance ${distance.toFixed(2)}`);
+    }
+  });
+
+  return null;
+}
+
+// Modify the existing LODControls component
+function LODControls() {
+  const snap = useSnapshot(state);
+  const [autoLOD, setAutoLOD] = useState(true);
+
+  const handleLODChange = (level) => {
+    if (!autoLOD) {
+      state.currentModel.lod = level;
+    }
+  };
+
+  const toggleAutoLOD = () => {
+    setAutoLOD(!autoLOD);
+  };
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "20px",
+      left: "670px",
+      background: "rgba(255,255,255,0.9)",
+      padding: "10px",
+      borderRadius: "4px",
+      width: "200px"
+    }}>
+      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>LOD Controls</h2>
+      <label style={{ display: "block", marginBottom: "8px" }}>
+        <input
+          type="checkbox"
+          checked={autoLOD}
+          onChange={toggleAutoLOD}
+          style={{ marginRight: "8px" }}
+        />
+        Automatic LOD
+      </label>
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "8px",
+        opacity: autoLOD ? 0.5 : 1,
+        pointerEvents: autoLOD ? "none" : "auto"
+      }}>
+        {[0, 1, 2, 3].map((level) => (
+          <button
+            key={level}
+            onClick={() => handleLODChange(level)}
+            style={{
+              padding: "8px",
+              background: snap.currentModel.lod === level ? "#2196F3" : "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer"
+            }}>
+            LOD {level} ({level === 0 ? "Highest" : level === 3 ? "Lowest" : "Medium"})
+          </button>
+        ))}
+      </div>
+      <div style={{ 
+        fontSize: "12px", 
+        marginTop: "8px", 
+        color: "#666" 
+      }}>
+        Current: LOD {snap.currentModel.lod}
+      </div>
+    </div>
+  );
+}
 
 const materialPresets = {
   'leather-quilted': {
@@ -96,48 +215,28 @@ const materialPresets = {
     name: 'Cotton Tricotine',
     textures: {
       baseColor: '/cotton-tricotine/cotton-tricotine_BaseColor.png',
-      // height: '/cotton-tricotine/cotton-tricotine_Height.png',
       normal: '/cotton-tricotine/cotton-tricotine_Normal.png',
-      // roughness: '/cotton-tricotine/cotton-tricotine_Roughness.png',
-      // ao: '/cotton-tricotine/cotton-tricotine_AmbientOcclusion.png',
-      // metallic: '/cotton-tricotine/cotton-tricotine_Metallic.png',
-      // opacity: '/cotton-tricotine/cotton-tricotine_Opacity.png',
     },
   },
   'blue-turbo': {
     name: 'Blue Turbo',
     textures: {
       baseColor: '/blue-turbo-acryllic/blue-turbo-acryllic_BaseColor.png',
-      // height: '/blue-turbo-acryllic/blue-turbo-acryllic_Height.png',
       normal: '/blue-turbo-acryllic/blue-turbo-acryllic_Normal.png',
-      // roughness: '/blue-turbo-acryllic/blue-turbo-acryllic_Roughness.png',
-      // ao: '/blue-turbo-acryllic/blue-turbo-acryllic_AmbientOcclusion.png',
-      // metallic: '/blue-turbo-acryllic/blue-turbo-acryllic_Metallic.png',
-      // opacity: '/blue-turbo-acryllic/blue-turbo-acryllic_Opacity.png',
     },
   },
   'cotton-jersey-grey': {
     name: 'Cotton Jersey Grey',
     textures: {
       baseColor: '/cotton-jersey-grey/col.png',
-      // height: '/cotton-jersey-grey/height.png',
       normal: '/cotton-jersey-grey/normal.png',
-      // roughness: '/cotton-jersey-grey/roughness.png',
-      // ao: '/cotton-jersey-grey/ao.png',
-      // metallic: '/cotton-jersey-grey/metallic.png',
-      // opacity: '/cotton-jersey-grey/opacity.png',
     },
   },
   'nylon-webbing': {
     name: 'Nylon Webbing',
     textures: {
       baseColor: '/nylon-webbing/nylon-webbing_BaseColor.png',
-      // height: '/nylon-webbing/nylon-webbing_Height.png',
       normal: '/nylon-webbing/nylon-webbing_Normal.png',
-      // roughness: '/nylon-webbing/nylon-webbing_Roughness.png',
-      // ao: '/nylon-webbing/nylon-webbing_AmbientOcclusion.png',
-      // metallic: '/nylon-webbing/nylon-webbing_Metallic.png',
-      // opacity: '/nylon-webbing/nylon-webbing_Opacity.png',
     },
   }
 }
@@ -206,6 +305,8 @@ export default function App() {
           shadow-bias={-0.0001}
         />
         <Model3D />
+        <LODController />
+
         <ContactShadows 
           position={snap.shadows.position}
           opacity={snap.shadows.opacity}
@@ -239,20 +340,28 @@ export default function App() {
       <VideoRecorder />
       <MeshListPanel />
       <ModelSwitcher />
+      <LODControls />
+
     </>
   )
 }
 
-// Add a new floating panel with a button to switch models
+// Modify the ModelSwitcher component in App.js
 function ModelSwitcher() {
   const snap = useSnapshot(state);
 
   function switchModel() {
-    console.log("Current model:", state.currentModel);
-    // Make sure the path to new_model.glb is correct
-    const newModelPath = "/new_model.glb"; // Adjust this path to where your model is actually located
-    console.log("Switching to:", newModelPath);
-    state.currentModel = newModelPath;
+    const newModel = {
+      name: "new_model",
+      lod: 0,
+      paths: {
+      lod0: "/hoodie0.glb",     // Highest quality
+      lod1: "/hoodie2.glb", // High quality
+      lod2: "/hoodie3.glb", // Medium quality
+      lod3: "/hoodie4.glb"  // Low quality
+      }
+    };
+    state.currentModel = newModel;
   }
 
   return (
@@ -278,23 +387,26 @@ function ModelSwitcher() {
         Switch to New Model
       </button>
       <div style={{ fontSize: "12px", marginTop: "4px", color: "#666" }}>
-        Current: {snap.currentModel}
+        Current: {snap.currentModel.name} (LOD {snap.currentModel.lod})
       </div>
     </div>
   );
 }
 
-// First, rename the component definition
 function Model3D() {
   const ref = useRef();
   const snap = useSnapshot(state);
   const [currentLoadedModel, setCurrentLoadedModel] = useState(null);
 
-  // Clear the GLTF cache and dispose of previous model
+  const getCurrentModelPath = () => {
+    const lodLevel = `lod${snap.currentModel.lod}`;
+    return snap.currentModel.paths[lodLevel];
+  };
+
   useEffect(() => {
-    console.log("Model change detected:", snap.currentModel);
+    const currentPath = getCurrentModelPath();
+    console.log("Model change detected:", currentPath);
     
-    // Cleanup previous model
     if (currentLoadedModel) {
       console.log("Cleaning up previous model");
       currentLoadedModel.traverse((obj) => {
@@ -311,13 +423,11 @@ function Model3D() {
       });
     }
 
-    // Clear the cache
-    useGLTF.clear(snap.currentModel);
+    useGLTF.clear(currentPath);
     
-    // Load new model
     const loadModel = async () => {
       try {
-        const gltf = await useGLTF(snap.currentModel);
+        const gltf = await useGLTF(currentPath);
         console.log("New model loaded:", gltf);
         setCurrentLoadedModel(gltf.scene);
       } catch (error) {
@@ -327,13 +437,12 @@ function Model3D() {
 
     loadModel();
 
-    // Cleanup function
     return () => {
-      useGLTF.clear(snap.currentModel);
+      useGLTF.clear(currentPath);
     };
-  }, [snap.currentModel]);
+  }, [snap.currentModel.lod]);
 
-  const { nodes, materials } = useGLTF(snap.currentModel);
+  const { nodes, materials } = useGLTF(getCurrentModelPath());
   console.log("Current nodes:", nodes);
   console.log("Current materials:", materials);
 
@@ -342,7 +451,6 @@ function Model3D() {
   const [dragging, setDragging] = useState(false);
   const [loadedTextures, setLoadedTextures] = useState({});
 
-  // Load textures for current material preset
   useEffect(() => {
     const loader = new TextureLoader();
     const currentPreset = materialPresets[snap.materialPreset.current];
@@ -362,19 +470,16 @@ function Model3D() {
     };
 
     loadAllTextures();
-  }, [snap.materialPreset.current]); // Add this dependency
+  }, [snap.materialPreset.current]);
 
-  // Apply textures to materials
   useEffect(() => {
     if (Object.keys(loadedTextures).length > 0) {
       if (snap.materialPreset.applyToTargetOnly && snap.decalTarget) {
-        // Find the node that matches the selected target
         const targetNode = nodes[snap.decalTarget];
         if (targetNode) {
           const materialKey = targetNode.material?.name || snap.decalTarget;
           const sharedMaterial = materials[materialKey];
           if (sharedMaterial) {
-            // Clone the material so that changes affect only this mesh
             const targetMaterial = sharedMaterial.clone();
             Object.values(loadedTextures).forEach(texture => {
               if (texture) {
@@ -402,12 +507,10 @@ function Model3D() {
               targetMaterial.emissiveMap = loadedTextures.emissive;
             targetMaterial.needsUpdate = true;
             
-            // Assign the cloned material only to the target node
             targetNode.material = targetMaterial;
           }
         }
       } else {
-        // Apply to all materials
         Object.values(materials).forEach(material => {
           Object.values(loadedTextures).forEach(texture => {
             if (texture) {
@@ -439,7 +542,6 @@ function Model3D() {
     }
   }, [loadedTextures, materials, nodes, snap.materialPreset.applyToTargetOnly, snap.decalTarget]);
 
-  // Initialize state with dynamic materials when component mounts
   useEffect(() => {
     if (nodes) {
       const nodeEntries = Object.entries(nodes)
@@ -450,7 +552,6 @@ function Model3D() {
         }, {});
       state.items = nodeEntries;
 
-      // Set the initial decalTarget to the first unique node key
       const firstMeshKey = Object.keys(nodeEntries)[0];
       if (firstMeshKey) {
         state.decalTarget = firstMeshKey;
@@ -459,7 +560,7 @@ function Model3D() {
   }, [nodes]);
 
   useFrame((state) => {
-    if (!snap.animationEnabled) return; // Add this line
+    if (!snap.animationEnabled) return;
     const t = state.clock.getElapsedTime();
     ref.current.rotation.set(
       Math.cos(t / 4) / 8,
@@ -493,7 +594,7 @@ function Model3D() {
   const shouldApplyDecal = (partKey) => partKey === snap.decalTarget;
 
   const handlePointerMove = (e) => {
-    if (!dragging || !snap.decalMovementEnabled) return; // Check if decal movement is enabled
+    if (!dragging || !snap.decalMovementEnabled) return;
     e.stopPropagation();
     const localPoint = e.object.worldToLocal(e.point.clone());
     state.decalTransform.position = [localPoint.x, localPoint.y, localPoint.z];
@@ -502,13 +603,11 @@ function Model3D() {
   const handlePointerDown = (e) => {
     if (e.button !== 0) return;
     if (e.object.name === snap.decalTarget) {
-      // Check the mesh's name
       e.stopPropagation();
       setDragging(true);
     }
   };
 
-  // Add this useEffect for debugging
   useEffect(() => {
     console.log("Available nodes:", Object.keys(nodes));
     console.log("Available materials:", Object.keys(materials));
@@ -528,14 +627,14 @@ function Model3D() {
       }}
       onPointerMissed={() => {
         state.current = null;
-        state.outlinedMesh = null; // Clear the outline when clicking outside
+        state.outlinedMesh = null;
       }}
       onClick={(e) => {
         e.stopPropagation();
         const meshName = e.object.name || e.object.material.name;
         state.current = meshName;
         state.selectedMesh = meshName;
-        state.outlinedMesh = meshName; // Set the outlined mesh
+        state.outlinedMesh = meshName;
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -753,8 +852,8 @@ function DecalControls() {
         Decal Height Offset:
         <input
           type="range"
-          min={-50}  // Increased range
-          max={50}   // Allow positive values
+          min={-50}
+          max={50}
           step={0.1}
           value={snap.decalTransform.polygonOffset}
           onChange={(e) => {
@@ -1135,7 +1234,6 @@ function PresetControls() {
   const snap = useSnapshot(state)
 
   useEffect(() => {
-    // Load saved presets from localStorage on mount
     const savedPresets = localStorage.getItem('lightingPresets')
     if (savedPresets) {
       state.presets.saved = JSON.parse(savedPresets)
@@ -1250,7 +1348,6 @@ function VideoRecorder() {
   const canvasRef = useRef(null)
 
   useEffect(() => {
-    // Get the canvas element from Three.js
     const canvas = document.querySelector('canvas')
     canvasRef.current = canvas
   }, [])
@@ -1258,7 +1355,7 @@ function VideoRecorder() {
   const startRecording = async () => {
     if (!canvasRef.current) return
     
-    const stream = canvasRef.current.captureStream(60) // 60fps
+    const stream = canvasRef.current.captureStream(60)
     const recorder = new MediaRecorder(stream, {
       mimeType: 'video/webm;codecs=vp9',
       videoBitsPerSecond: 5000000
@@ -1285,7 +1382,6 @@ function VideoRecorder() {
     recorder.start()
     state.video.isRecording = true
 
-    // Stop recording after 8 seconds
     setTimeout(() => {
       if (recorder.state === 'recording') {
         recorder.stop()
@@ -1294,7 +1390,6 @@ function VideoRecorder() {
   }
 
   useEffect(() => {
-    // Load saved recordings from localStorage
     const savedRecordings = localStorage.getItem('videoRecordings')
     if (savedRecordings) {
       state.video.recordings = JSON.parse(savedRecordings)
@@ -1397,12 +1492,10 @@ function MaterialPresetPicker() {
     state.materialPreset.current = presetKey
     
     if (snap.materialPreset.applyToTargetOnly) {
-      // Apply only to target mesh
       if (snap.decalTarget) {
         state.items[snap.decalTarget] = state.materialPreset.colors[presetKey]
       }
     } else {
-      // Apply to all materials
       Object.keys(state.items).forEach(materialKey => {
         state.items[materialKey] = state.materialPreset.colors[presetKey]
       })
@@ -1520,8 +1613,6 @@ function MaterialPresetPicker() {
     </div>
   )
 }
-
-
 
 function CameraController() {
   const { camera } = useThree()

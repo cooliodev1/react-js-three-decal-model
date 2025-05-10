@@ -381,23 +381,102 @@ function ModelSwitcher() {
   const snap = useSnapshot(state);
 
   function switchModel() {
-    const newModel = {
-      name: "new_model",
-      lod: 0,
-      paths: {
-        lod0: "/hoodie-flat-lod0.gltf",
-        lod1: "/hoodie-flat-lod0.gltf",
-        lod2: "/hoodie-flat-lod0.gltf",
-        lod3: "/hoodie-flat-lod0.gltf"
-      },
-      lodThresholds: {
-        lod0: 15,
-        lod1: 44,
-        lod2: 55,
-        lod3: 66
-      }
+    const isFlat = snap.currentModel.name === "flat_hoodie";
+    
+    // Save current selections
+    const currentSelections = {
+      target: snap.decalTarget,
+      selected: snap.selectedMesh,
+      outlined: snap.outlinedMesh
     };
-    state.currentModel = newModel;
+    
+    if (isFlat) {
+      // Switch back to original model
+      const originalModel = {
+        name: "hoodie0",
+        lod: 0,
+        paths: {
+          lod0: "/hoodie-lod0.gltf",
+          lod1: "/hoodie-lod1.gltf",
+          lod2: "/hoodie-lod2.gltf",
+          lod3: "/hoodie-lod2.gltf"
+        },
+        lodThresholds: {
+          lod0: 15,
+          lod1: 44,
+          lod2: 55,
+          lod3: 66
+        },
+        decalTransform: {
+          position: [0, 0.1, 0.5],
+          rotation: [0, 0, 0],
+          scale: 0.3
+        }
+      };
+      
+      state.currentModel = originalModel;
+      
+      // Apply original decal transform
+      if (originalModel.decalTransform) {
+        state.decalTransform = {
+          ...state.decalTransform,
+          position: originalModel.decalTransform.position,
+          rotation: originalModel.decalTransform.rotation,
+          scale: originalModel.decalTransform.scale
+        };
+      }
+    } else {
+      // Switch to flat model
+      const flatModel = {
+        name: "flat_hoodie",
+        lod: 0,
+        paths: {
+          lod0: "/hoodie-flat-lod0.gltf",
+          lod1: "/hoodie-flat-lod0.gltf",
+          lod2: "/hoodie-flat-lod0.gltf",
+          lod3: "/hoodie-flat-lod0.gltf"
+        },
+        lodThresholds: {
+          lod0: 15,
+          lod1: 44,
+          lod2: 55,
+          lod3: 66
+        },
+        decalTransform: {
+          position: [0, 0, 0.1],
+          rotation: [Math.PI/2, 0, 0],
+          scale: 0.2
+        }
+      };
+      
+      state.currentModel = flatModel;
+      
+      // Apply flat model decal transform
+      if (flatModel.decalTransform) {
+        state.decalTransform = {
+          ...state.decalTransform,
+          position: flatModel.decalTransform.position,
+          rotation: flatModel.decalTransform.rotation,
+          scale: flatModel.decalTransform.scale
+        };
+      }
+    }
+    
+    // Create a delayed function to restore selections after model loads
+    setTimeout(() => {
+      // Check if the previously selected mesh names still exist in the new model
+      // If mesh names are the same across models, we can restore selections
+      // You might need to map mesh names between models if they differ
+      if (currentSelections.target) {
+        state.decalTarget = currentSelections.target;
+      }
+      if (currentSelections.selected) {
+        state.selectedMesh = currentSelections.selected;
+      }
+      if (currentSelections.outlined) {
+        state.outlinedMesh = currentSelections.outlined;
+      }
+    }, 500); // Allow time for model to load
   }
 
   return (
@@ -420,7 +499,7 @@ function ModelSwitcher() {
           color: "white",
           cursor: "pointer"
         }}>
-        Switch to New Model
+        Switch to {snap.currentModel.name === "flat_hoodie" ? "Standing Hoodie" : "Flat Hoodie"}
       </button>
       <div style={{ fontSize: "12px", marginTop: "4px", color: "#666" }}>
         Current: {snap.currentModel.name} (LOD {snap.currentModel.lod})
@@ -450,6 +529,13 @@ function Model3D() {
     if (previousLOD !== snap.currentModel.lod) {
       setIsTransitioning(true);
       
+      // Save the current selection before changing LOD
+      const currentSelection = {
+        target: snap.decalTarget,
+        selected: snap.selectedMesh,
+        outlined: snap.outlinedMesh
+      };
+      
       const timer = setTimeout(() => {
         const currentPath = getCurrentModelPath();
         
@@ -473,8 +559,20 @@ function Model3D() {
             setCurrentLoadedModel(gltf.scene);
             setPreviousLOD(snap.currentModel.lod);
             
+            // After model loads, restore the selection
             setTimeout(() => {
               setIsTransitioning(false);
+              
+              // Restore selection if the mesh still exists in new LOD model
+              if (currentSelection.target) {
+                state.decalTarget = currentSelection.target;
+              }
+              if (currentSelection.selected) {
+                state.selectedMesh = currentSelection.selected;
+              }
+              if (currentSelection.outlined) {
+                state.outlinedMesh = currentSelection.outlined;
+              }
             }, 50);
           } catch (error) {
             console.error("Error loading model:", error);
@@ -725,6 +823,7 @@ function Model3D() {
                   renderOrder={10}
                   depthTest={true}
                   depthWrite={false}
+                  polygonOffset={snap.currentModel.name === "flat_hoodie"}
                   meshPhysicalMaterial={{
                     transparent: true,
                     opacity: snap.decalTransform.opacity,

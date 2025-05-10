@@ -5,6 +5,8 @@ import { proxy, useSnapshot } from "valtio"
 import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, Vector3, RepeatWrapping } from "three" // Added Vector3
 import { HexColorPicker } from "react-colorful"
 import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel" // Add this import
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"
+
 
 // Change the state declaration to export it
 export const state = proxy({
@@ -91,12 +93,31 @@ export const state = proxy({
     },
       lodThresholds: {
       lod0: 1,    // Use highest quality when closer than 3 units
-      lod1: 6,    // Use high quality between 3-5 units
-      lod2: 10,    // Use medium quality between 5-7 units
-      lod3: 21,  // Use lowest quality when further than 7 units
+      lod1: 15,    // Use high quality between 3-5 units
+      lod2: 25,    // Use medium quality between 5-7 units
+      lod3: 34,  // Use lowest quality when further than 7 units
     }
   }
 })
+
+
+// preload if you like
+// useGLTF.preload('/hoodie0.glb')
+
+function Model({ url }) {
+  // create/configure DRACOLoader once
+  const dracoLoader = new DRACOLoader()
+  dracoLoader.setDecoderPath('/draco/')
+
+  // pass it to useGLTF as the second argument
+  const { scene } = useGLTF(
+    url,
+    // this can be either a path string, or a function to configure the loader
+    loader => loader.setDRACOLoader(dracoLoader)
+  )
+
+  return <primitive object={scene} />
+}
 
 
 function CameraDistanceOverlay() {

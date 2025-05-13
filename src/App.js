@@ -428,14 +428,13 @@ function ModelSwitcher() {
     } else {
       // Switch to flat model
       const flatModel = {
-        name: "flat_hoodie",
+        name: "new",
         lod: 0,
         paths: {
-          lod0: "/hoodie-flat-lod0.gltf",
-          lod1: "/hoodie-flat-lod0.gltf",
-          lod2: "/hoodie-flat-lod0.gltf",
-          lod3: "/hoodie-flat-lod0.gltf"
-        },
+          lod0: "/ls-shirt1.glb",
+          lod1: "/ls-shirt1.glb",
+          lod2: "/ls-shirt1.glb",
+          lod3: "/ls-shirt1.glb"        },
         lodThresholds: {
           lod0: 15,
           lod1: 44,

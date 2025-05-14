@@ -76,7 +76,7 @@ export const state = proxy({
   materialPreset: {
     current: 'cotton-jersey-grey',
     colors: {
-      'cotton-jersey-grey': '',
+      'cotton-jersey-grey': '#ff0000',
       'cotton-tricotine': '',
       'nylon-webbing': ''
     },
@@ -431,10 +431,10 @@ function ModelSwitcher() {
         name: "new",
         lod: 0,
         paths: {
-          lod0: "/ls-shirt1.glb",
-          lod1: "/ls-shirt1.glb",
-          lod2: "/ls-shirt1.glb",
-          lod3: "/ls-shirt1.glb"        },
+          lod0: "/merch-wall.glb",
+          lod1: "/merch-wall.glb",
+          lod2: "/merch-wall.glb",
+          lod3: "/merch-wall.glb"        },
         lodThresholds: {
           lod0: 15,
           lod1: 44,

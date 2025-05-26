@@ -4,7 +4,14 @@ import { useGLTF, ContactShadows, OrbitControls, Decal, useTexture } from "@reac
 import { proxy, useSnapshot } from "valtio"
 import { MOUSE, PCFSoftShadowMap, Color, TextureLoader, Vector3, RepeatWrapping } from "three"
 import { HexColorPicker } from "react-colorful"
-import { MeshListPanel, OutlineEffect } from "./components/MeshListPanel"
+import { 
+  MeshListPanel, 
+  OutlineEffect, 
+  Accordion, 
+  AccordionItem, 
+  AccordionTrigger, 
+  AccordionContent 
+} from "./components/MeshListPanel"
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"
 import { useSpring, a } from "@react-spring/three" // Add this import
 
@@ -119,17 +126,8 @@ function Model({ url }) {
 function CameraDistanceOverlay() {
   const snap = useSnapshot(state);
   return (
-    <div style={{
-      position: "absolute",
-      top: "60px",
-      left: "520px",
-      background: "rgba(0, 0, 0, 0.6)",
-      color: "#fff",
-      padding: "6px 12px",
-      fontSize: "14px",
-      borderRadius: "4px",
-      pointerEvents: "none"
-    }}>
+    // Positioned top-right, remains absolute for now
+    <div className="camera-distance-overlay" style={{ top: "10px", right: "10px" }}> 
       Distance: {snap.cameraDistance.toFixed(2)}
     </div>
   );
@@ -177,53 +175,36 @@ function LODControls() {
   };
 
   return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      left: "670px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px",
-      width: "200px"
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>LOD Controls</h2>
-      <label style={{ display: "block", marginBottom: "8px" }}>
+    // Removed style prop, will flow in sidebar
+    <div className="control-panel"> 
+      <h2 className="panel-title">LOD Controls</h2>
+      <label className="compact-label">
         <input
           type="checkbox"
           checked={autoLOD}
           onChange={toggleAutoLOD}
-          style={{ marginRight: "8px" }}
+          className="compact-checkbox"
         />
         Automatic LOD
       </label>
-      <div style={{ 
-        display: "flex", 
-        flexDirection: "column", 
-        gap: "8px",
-        opacity: autoLOD ? 0.5 : 1,
-        pointerEvents: autoLOD ? "none" : "auto"
+      <div 
+        className="flex-column"
+        style={{ 
+          opacity: autoLOD ? 0.5 : 1,
+          pointerEvents: autoLOD ? "none" : "auto"
       }}>
         {[0, 1, 2, 3].map((level) => (
           <button
             key={level}
             onClick={() => handleLODChange(level)}
-            style={{
-              padding: "8px",
-              background: snap.currentModel.lod === level ? "#2196F3" : "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer"
-            }}>
+            className={`compact-button ${snap.currentModel.lod === level ? "compact-button-secondary" : ""}`}
+            style={{ background: snap.currentModel.lod === level ? "#2196F3" : "#4CAF50" }}
+            >
             LOD {level} ({level === 0 ? "Highest" : level === 3 ? "Lowest" : "Medium"})
           </button>
         ))}
       </div>
-      <div style={{ 
-        fontSize: "12px", 
-        marginTop: "8px", 
-        color: "#666" 
-      }}>
+      <div className="text-xs">
         Current: LOD {snap.currentModel.lod}
       </div>
     </div>
@@ -271,9 +252,17 @@ const materialPresets = {
 
 export default function App() {
   const snap = useSnapshot(state)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   return (
     <>
+      <button className="sidebar-toggle-button" onClick={toggleSidebar}>
+        ☰
+      </button>
       <Canvas
         shadows
         camera={{ position: [0, 0, snap.cameraDistance], fov: 5 }}
@@ -289,13 +278,7 @@ export default function App() {
         scene={{
           background: new Color('#000000')
         }}
-        style={{ 
-          position: "absolute", 
-          top: 0, 
-          left: 0, 
-          width: "100%", 
-          height: "100%" 
-        }}>
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
           
         <ambientLight 
           intensity={snap.lights.ambient.intensity} 
@@ -362,15 +345,23 @@ export default function App() {
         <OutlineEffect />
        
       </Canvas>
-      <MaterialPresetPicker />
-      <ZoomControls />
-      <DecalControls />
-      <LightingControls />
-      <PresetControls />
-      <VideoRecorder />
-      <MeshListPanel />
-      <ModelSwitcher />
-      <LODControls />
+
+      {/* Sidebar Container - Assuming it will be on the left */}
+      <div className={`ui-sidebar ${isSidebarOpen ? "open" : ""}`}>
+        <Picker /> {/* Moved Picker into the sidebar */}
+        <ZoomControls />
+        <LODControls />
+        <ModelSwitcher />
+        <MeshListPanel />
+        <MaterialPresetPicker />
+        <DecalControls />
+        <LightingControls />
+        <PresetControls />
+        <VideoRecorder />
+      </div>
+
+      {/* Components that remain outside the sidebar */}
+      {/* <Picker /> Picker is now in sidebar */}
       <CameraDistanceOverlay /> 
 
     </>
@@ -479,28 +470,16 @@ function ModelSwitcher() {
   }
 
   return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      left: "800px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px"
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Model Switcher</h2>
+    // Removed style prop
+    <div className="control-panel"> 
+      <h2 className="panel-title">Model Switcher</h2>
       <button
         onClick={switchModel}
-        style={{
-          padding: "8px 16px",
-          borderRadius: "4px",
-          border: "none",
-          background: "#4CAF50",
-          color: "white",
-          cursor: "pointer"
-        }}>
+        className="compact-button"
+      >
         Switch to {snap.currentModel.name === "flat_hoodie" ? "Standing Hoodie" : "Flat Hoodie"}
       </button>
-      <div style={{ fontSize: "12px", marginTop: "4px", color: "#666" }}>
+      <div className="text-xs">
         Current: {snap.currentModel.name} (LOD {snap.currentModel.lod})
       </div>
     </div>
@@ -844,24 +823,16 @@ function Model3D() {
 function Picker() {
   const snap = useSnapshot(state)
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "20px",
-        left: "20px",
-        display: snap.current ? "block" : "none",
-        background: "rgba(255,255,255,0.9)",
-        padding: "10px",
-        borderRadius: "4px",
-      }}>
+    // Removed inline style for positioning, will flow in sidebar. Conditional display kept.
+    <div className="picker-container" style={{ display: snap.current ? "block" : "none" }}>
       <HexColorPicker
-        className="picker"
+        className="picker" 
         color={snap.items[snap.current]}
         onChange={(color) => {
           state.items[snap.current] = color
         }}
       />
-      <h1 style={{ margin: "8px 0 0 0", fontSize: "16px" }}>{snap.current}</h1>
+      <h1>{snap.current}</h1>
     </div>
   )
 }
@@ -894,148 +865,129 @@ function DecalControls() {
   }
 
   return (
-    <div style={{
-      position: "absolute",
-      bottom: "20px",
-      left: "20px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px",
-      maxWidth: "320px",
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Decal Transform Controls</h2>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Enable Bouncing Animation:
-        <input 
-          type="checkbox" 
-          checked={snap.animationEnabled} 
-          onChange={toggleAnimation} 
-          style={{ marginLeft: "8px" }} 
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Enable Decal Movement:
-        <input 
-          type="checkbox" 
-          checked={snap.decalMovementEnabled} 
-          onChange={(e) => { state.decalMovementEnabled = e.target.checked }} 
-          style={{ marginLeft: "8px" }} 
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "8px" }}>
-        Select Target Mesh:
-        <select 
-          value={snap.decalTarget} 
-          onChange={updateTarget} 
-          style={{ display: "block", marginTop: "4px", width: "100%" }}
-        >
-          {Object.keys(snap.items).map((materialKey) => (
-            <option key={materialKey} value={materialKey}>
-              {materialKey}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Flip Decal Horizontally:
-        <input type="checkbox" checked={snap.decalTransform.rotation[1] === Math.PI} onChange={toggleFlipY} style={{ marginLeft: "8px" }} />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Enable Orbit Rotation:
-        <input type="checkbox" checked={snap.orbitEnabled} onChange={toggleOrbit} style={{ marginLeft: "8px" }} />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Position X:
-        <input
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          value={snap.decalTransform.position[0]}
-          onChange={(e) => updatePosition(0, parseFloat(e.target.value))}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Position Y:
-        <input
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          value={snap.decalTransform.position[1]}
-          onChange={(e) => updatePosition(1, parseFloat(e.target.value))}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Position Z:
-        <input
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          value={snap.decalTransform.position[2]}
-          onChange={(e) => updatePosition(2, parseFloat(e.target.value))}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Scale:
-        <input
-          type="range"
-          min={0.1}
-          max={2}
-          step={0.01}
-          value={snap.decalTransform.scale}
-          onChange={(e) => {
-            state.decalTransform.scale = parseFloat(e.target.value)
-          }}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Decal Height Offset:
-        <input
-          type="range"
-          min={-50}
-          max={50}
-          step={0.1}
-          value={snap.decalTransform.polygonOffset}
-          onChange={(e) => {
-            state.decalTransform.polygonOffset = parseFloat(e.target.value)
-          }}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Decal Roughness:
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={snap.decalTransform.roughness}
-          onChange={(e) => {
-            state.decalTransform.roughness = parseFloat(e.target.value)
-          }}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: "4px" }}>
-        Decal Opacity:
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={snap.decalTransform.opacity || 0.95}
-          onChange={(e) => {
-            state.decalTransform.opacity = parseFloat(e.target.value)
-          }}
-          style={{ width: "100%", marginTop: "4px" }}
-        />
-      </label>
+    <div className="control-panel"> 
+      <h2 className="panel-title">Decal Transform Controls</h2>
+      <Accordion type="multiple" collapsible className="w-full" defaultValue={['general', 'position']}>
+        <AccordionItem value="general">
+          <AccordionTrigger>General Settings</AccordionTrigger>
+          <AccordionContent>
+            <div className="flex-column" style={{paddingTop: '4px'}}> {/* Added paddingTop for spacing after trigger */}
+              <label className="compact-label">
+                Enable Bouncing Animation:
+                <input 
+                  type="checkbox" 
+                  checked={snap.animationEnabled} 
+                  onChange={toggleAnimation} 
+                  className="compact-checkbox" 
+                />
+              </label>
+              <label className="compact-label">
+                Enable Decal Movement:
+                <input 
+                  type="checkbox" 
+                  checked={snap.decalMovementEnabled} 
+                  onChange={(e) => { state.decalMovementEnabled = e.target.checked }} 
+                  className="compact-checkbox"
+                />
+              </label>
+              <label className="compact-label">
+                Select Target Mesh:
+                <select 
+                  value={snap.decalTarget} 
+                  onChange={updateTarget} 
+                  className="compact-select"
+                >
+                  {Object.keys(snap.items).map((materialKey) => (
+                    <option key={materialKey} value={materialKey}>
+                      {materialKey}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="compact-label">
+                Flip Decal Horizontally:
+                <input type="checkbox" checked={snap.decalTransform.rotation[1] === Math.PI} onChange={toggleFlipY} className="compact-checkbox" />
+              </label>
+              <label className="compact-label">
+                Enable Orbit Rotation:
+                <input type="checkbox" checked={snap.orbitEnabled} onChange={toggleOrbit} className="compact-checkbox" />
+              </label>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="position">
+          <AccordionTrigger>Position</AccordionTrigger>
+          <AccordionContent>
+            <div className="flex-column" style={{paddingTop: '4px'}}>
+              <label className="compact-label">
+                Position X:
+                <input
+                  type="range" min={-1} max={1} step={0.01}
+                  value={snap.decalTransform.position[0]}
+                  onChange={(e) => updatePosition(0, parseFloat(e.target.value))}
+                  className="compact-input" />
+              </label>
+              <label className="compact-label">
+                Position Y:
+                <input
+                  type="range" min={-1} max={1} step={0.01}
+                  value={snap.decalTransform.position[1]}
+                  onChange={(e) => updatePosition(1, parseFloat(e.target.value))}
+                  className="compact-input" />
+              </label>
+              <label className="compact-label">
+                Position Z:
+                <input
+                  type="range" min={-1} max={1} step={0.01}
+                  value={snap.decalTransform.position[2]}
+                  onChange={(e) => updatePosition(2, parseFloat(e.target.value))}
+                  className="compact-input" />
+              </label>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="attributes">
+          <AccordionTrigger>Attributes</AccordionTrigger>
+          <AccordionContent>
+            <div className="flex-column" style={{paddingTop: '4px'}}>
+              <label className="compact-label">
+                Scale:
+                <input
+                  type="range" min={0.1} max={2} step={0.01}
+                  value={snap.decalTransform.scale}
+                  onChange={(e) => { state.decalTransform.scale = parseFloat(e.target.value) }}
+                  className="compact-input" />
+              </label>
+              <label className="compact-label">
+                Decal Height Offset:
+                <input
+                  type="range" min={-50} max={50} step={0.1}
+                  value={snap.decalTransform.polygonOffset}
+                  onChange={(e) => { state.decalTransform.polygonOffset = parseFloat(e.target.value) }}
+                  className="compact-input" />
+              </label>
+              <label className="compact-label">
+                Decal Roughness:
+                <input
+                  type="range" min={0} max={1} step={0.01}
+                  value={snap.decalTransform.roughness}
+                  onChange={(e) => { state.decalTransform.roughness = parseFloat(e.target.value) }}
+                  className="compact-input" />
+              </label>
+              <label className="compact-label">
+                Decal Opacity:
+                <input
+                  type="range" min={0} max={1} step={0.01}
+                  value={snap.decalTransform.opacity || 0.95}
+                  onChange={(e) => { state.decalTransform.opacity = parseFloat(e.target.value) }}
+                  className="compact-input" />
+              </label>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }
@@ -1050,21 +1002,17 @@ function LightingControls() {
   }
 
   return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      right: "20px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px",
-      maxWidth: "320px",
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Lighting Controls</h2>
-      
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Ambient Light</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Intensity:
+    // Removed style prop
+    <div className="control-panel"> 
+      <h2 className="panel-title">Lighting Controls</h2>
+      <Accordion type="multiple" collapsible className="w-full" defaultValue={['ambient']}>
+        <AccordionItem value="ambient">
+          <AccordionTrigger>Ambient Light</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}> {/* Existing wrapper div, can be adjusted/removed */}
+              {/* <h3 className="panel-subtitle">Ambient Light</h3> Already in Trigger */}
+              <label className="compact-label">
+                Intensity:
           <input
             type="range"
             min={0}
@@ -1074,12 +1022,12 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.ambient.intensity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <div style={{ marginTop: "8px" }}>
-          <h4 style={{ fontSize: "14px", margin: "8px 0" }}>Position:</h4>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+        <div style={{ marginTop: "6px" }}> {/* Reduced margin */}
+          <h4 style={{ fontSize: "13px", margin: "6px 0 4px 0" }}>Position:</h4> {/* Compact heading */}
+          <label className="compact-label">
             X:
             <input
               type="range"
@@ -1088,10 +1036,10 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.ambient.position[0]}
               onChange={(e) => updateLightPosition('ambient', 0, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+          <label className="compact-label">
             Y:
             <input
               type="range"
@@ -1100,10 +1048,10 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.ambient.position[1]}
               onChange={(e) => updateLightPosition('ambient', 1, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+          <label className="compact-label">
             Z:
             <input
               type="range"
@@ -1112,16 +1060,21 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.ambient.position[2]}
               onChange={(e) => updateLightPosition('ambient', 2, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
         </div>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Spot Light</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Intensity:
+        <AccordionItem value="spot">
+          <AccordionTrigger>Spot Light</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}>
+              {/* <h3 className="panel-subtitle">Spot Light</h3> */}
+              <label className="compact-label">
+                Intensity:
           <input
             type="range"
             min={0}
@@ -1131,10 +1084,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.spot.intensity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Angle:
           <input
             type="range"
@@ -1145,10 +1098,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.spot.angle = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Penumbra:
           <input
             type="range"
@@ -1159,12 +1112,12 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.spot.penumbra = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <div style={{ marginTop: "8px" }}>
-          <h4 style={{ fontSize: "14px", margin: "8px 0" }}>Position:</h4>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+        <div style={{ marginTop: "6px" }}>
+          <h4 style={{ fontSize: "13px", margin: "6px 0 4px 0" }}>Position:</h4>
+          <label className="compact-label">
             X:
             <input
               type="range"
@@ -1173,10 +1126,10 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.spot.position[0]}
               onChange={(e) => updateLightPosition('spot', 0, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+          <label className="compact-label">
             Y:
             <input
               type="range"
@@ -1185,10 +1138,10 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.spot.position[1]}
               onChange={(e) => updateLightPosition('spot', 1, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
-          <label style={{ display: "block", marginBottom: "4px" }}>
+          <label className="compact-label">
             Z:
             <input
               type="range"
@@ -1197,16 +1150,21 @@ function LightingControls() {
               step={0.1}
               value={snap.lights.spot.position[2]}
               onChange={(e) => updateLightPosition('spot', 2, e.target.value)}
-              style={{ width: "100%", marginTop: "4px" }}
+              className="compact-input"
             />
           </label>
         </div>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Hemisphere Light</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Intensity:
+        <AccordionItem value="hemisphere">
+          <AccordionTrigger>Hemisphere Light</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}>
+              {/* <h3 className="panel-subtitle">Hemisphere Light</h3> */}
+              <label className="compact-label">
+                Intensity:
           <input
             type="range"
             min={0}
@@ -1216,10 +1174,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.hemisphere.intensity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Sky Color:
           <input
             type="color"
@@ -1227,10 +1185,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.hemisphere.skyColor = e.target.value
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Ground Color:
           <input
             type="color"
@@ -1238,15 +1196,20 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.hemisphere.groundColor = e.target.value
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Point Light</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Intensity:
+        <AccordionItem value="point">
+          <AccordionTrigger>Point Light</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}>
+              {/* <h3 className="panel-subtitle">Point Light</h3> */}
+              <label className="compact-label">
+                Intensity:
           <input
             type="range"
             min={0}
@@ -1256,10 +1219,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.point.intensity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Distance:
           <input
             type="range"
@@ -1270,10 +1233,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.point.distance = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Decay:
           <input
             type="range"
@@ -1284,15 +1247,20 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.point.decay = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Directional Light</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Intensity:
+        <AccordionItem value="directional">
+          <AccordionTrigger>Directional Light</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}>
+              {/* <h3 className="panel-subtitle">Directional Light</h3> */}
+              <label className="compact-label">
+                Intensity:
           <input
             type="range"
             min={0}
@@ -1302,10 +1270,10 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.directional.intensity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Cast Shadow:
           <input
             type="checkbox"
@@ -1313,15 +1281,20 @@ function LightingControls() {
             onChange={(e) => {
               state.lights.directional.castShadow = e.target.checked
             }}
-            style={{ marginLeft: "8px" }}
+            className="compact-checkbox"
           />
         </label>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div style={{ marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>Contact Shadows</h3>
-        <label style={{ display: "block", marginBottom: "4px" }}>
-          Opacity:
+        <AccordionItem value="contactShadows">
+          <AccordionTrigger>Contact Shadows</AccordionTrigger>
+          <AccordionContent>
+            <div style={{ marginBottom: "12px" }}>
+              {/* <h3 className="panel-subtitle">Contact Shadows</h3> */}
+              <label className="compact-label">
+                Opacity:
           <input
             type="range"
             min={0}
@@ -1331,10 +1304,10 @@ function LightingControls() {
             onChange={(e) => {
               state.shadows.opacity = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Scale:
           <input
             type="range"
@@ -1345,10 +1318,10 @@ function LightingControls() {
             onChange={(e) => {
               state.shadows.scale = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Blur:
           <input
             type="range"
@@ -1359,19 +1332,25 @@ function LightingControls() {
             onChange={(e) => {
               state.shadows.blur = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-        <label style={{ display: "block", marginBottom: "4px" }}>
+        <label className="compact-label">
           Far:
           <input
+            type="number" // Changed to number for better input control
+            step={0.1}
+            value={snap.shadows.far}
             onChange={(e) => {
               state.shadows.far = parseFloat(e.target.value)
             }}
-            style={{ width: "100%", marginTop: "4px" }}
+            className="compact-input"
           />
         </label>
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }
@@ -1416,69 +1395,50 @@ function PresetControls() {
   }
 
   return (
-    <div style={{
-      position: "absolute",
-      top: "50%",
-      right: "20px",
-      transform: "translateY(-50%)",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px",
-      maxWidth: "200px",
-      maxHeight: "400px",
-      overflowY: "auto"
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Presets</h2>
+    // Removed style prop, max-height and overflow are good for sidebar
+    <div 
+      className="control-panel" 
+      style={{
+        maxHeight: "300px",
+        overflowY: "auto"
+      }}>
+      <h2 className="panel-title">Presets</h2>
       <button
         onClick={saveCurrentSettings}
-        style={{
-          width: "100%",
-          padding: "8px",
-          marginBottom: "8px",
-          background: "#4CAF50",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer"
-        }}>
+        className="compact-button full-width"
+        style={{ marginBottom: "6px" }} /* Reduced margin */
+      >
         Save Current Settings
       </button>
       
-      <div style={{ borderTop: "1px solid #ccc", paddingTop: "8px" }}>
+      <div style={{ borderTop: "1px solid #ccc", paddingTop: "6px" }}> {/* Reduced padding */}
         {snap.presets.saved.map((preset) => (
           <div
             key={preset.id}
             style={{
               display: "flex",
               alignItems: "center",
-              marginBottom: "4px",
-              padding: "4px",
+              marginBottom: "4px", /* Consistent small margin */
+              padding: "2px", /* Reduced padding */
               background: snap.presets.current === preset.id ? "#e0e0e0" : "transparent",
-              borderRadius: "4px"
+              borderRadius: "3px" /* Slightly smaller radius */
             }}>
             <button
               onClick={() => loadPreset(preset)}
+              className="compact-button compact-button-secondary"
               style={{
                 flex: 1,
-                padding: "4px 8px",
                 marginRight: "4px",
-                background: "none",
+                background: "none", // Overriding default button background
                 border: "1px solid #ccc",
-                borderRadius: "4px",
-                cursor: "pointer"
+                color: "#333" // Ensure text is visible on light background
               }}>
               {preset.name}
             </button>
             <button
               onClick={() => deletePreset(preset.id)}
-              style={{
-                padding: "4px 8px",
-                background: "#ff4444",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer"
-              }}>
+              className="compact-button compact-button-danger"
+            >
               ×
             </button>
           </div>
@@ -1548,45 +1508,37 @@ function VideoRecorder() {
   }
 
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: '20px',
-      right: '20px',
-      background: 'rgba(255,255,255,0.9)',
-      padding: '10px',
-      borderRadius: '4px',
-      maxWidth: '320px',
-      maxHeight: '400px',
-      overflowY: 'auto'
-    }}>
-      <h2 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Video Recorder</h2>
+    // Removed style prop, max-height and overflow are good for sidebar
+    <div 
+      className="control-panel" 
+      style={{
+        maxHeight: '350px', 
+        overflowY: 'auto'
+      }}>
+      <h2 className="panel-title">Video Recorder</h2>
       <button
         onClick={startRecording}
         disabled={snap.video.isRecording}
-        style={{
-          width: '100%',
-          padding: '8px',
-          marginBottom: '8px',
-          background: snap.video.isRecording ? '#ccc' : '#4CAF50',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: snap.video.isRecording ? 'default' : 'pointer'
-        }}>
+        className="compact-button full-width"
+        style={{ 
+          marginBottom: '6px',  /* Reduced margin */
+          backgroundColor: snap.video.isRecording ? '#ccc' : '#4CAF50' /* Keep dynamic background */
+        }}
+      >
         {snap.video.isRecording ? 'Recording... (8s)' : 'Start Recording'}
       </button>
 
-      <div style={{ borderTop: '1px solid #ccc', paddingTop: '8px' }}>
+      <div style={{ borderTop: '1px solid #ccc', paddingTop: '6px' }}> {/* Reduced padding */}
         {snap.video.recordings.map((recording) => (
           <div
             key={recording.id}
             style={{
-              marginBottom: '8px',
-              padding: '8px',
+              marginBottom: '6px', /* Reduced margin */
+              padding: '6px', /* Reduced padding */
               background: '#f5f5f5',
-              borderRadius: '4px'
+              borderRadius: '3px' /* Slightly smaller radius */
             }}>
-            <div style={{ marginBottom: '4px' }}>{recording.name}</div>
+            <div style={{ marginBottom: '4px', fontSize: '13px' }}>{recording.name}</div> {/* Smaller font */}
             <video
               controls
               style={{
@@ -1600,27 +1552,15 @@ function VideoRecorder() {
               <a
                 href={recording.url}
                 download={`${recording.name}.webm`}
-                style={{
-                  flex: 1,
-                  padding: '4px 8px',
-                  background: '#2196F3',
-                  color: 'white',
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                  borderRadius: '4px'
-                }}>
+                className="compact-button compact-button-secondary"
+                style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+              >
                 Download
               </a>
               <button
                 onClick={() => deleteRecording(recording.id)}
-                style={{
-                  padding: '4px 8px',
-                  background: '#ff4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}>
+                className="compact-button compact-button-danger"
+              >
                 Delete
               </button>
             </div>
@@ -1658,37 +1598,20 @@ function MaterialPresetPicker() {
   };
 
   return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      left: "300px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px"
-    }}>
-      <h2 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Material Presets</h2>
-      <label style={{ 
-        display: "block", 
-        marginBottom: "12px",
-        fontSize: "14px"
-      }}>
+    // Removed style prop
+    <div className="control-panel"> 
+      <h2 className="panel-title">Material Presets</h2>
+      <label className="compact-label" style={{ marginBottom: "8px" }}>
         <input 
           type="checkbox"
           checked={snap.materialPreset.applyToTargetOnly}
           onChange={toggleApplyToTarget}
-          style={{ marginRight: "8px" }}
+          className="compact-checkbox"
         />
         Apply to target mesh only
       </label>
-      <div style={{
-        display: "flex",
-        gap: "16px",
-        marginBottom: "12px"
-      }}>
-        <label style={{ 
-          flex: 1,
-          fontSize: "14px"
-        }}>
+      <div style={{ display: "flex", gap: "12px", marginBottom: "8px" }}> {/* Reduced gap and margin */}
+        <label className="compact-label" style={{ flex: 1 }}>
           Texture Scale (x):
           <input 
             type="range"
@@ -1697,24 +1620,14 @@ function MaterialPresetPicker() {
             step={0.25}
             value={snap.textureScale}
             onChange={updateTextureScale}
-            style={{ 
-              width: "100%", 
-              marginTop: "8px"
-            }}
+            className="compact-input"
           />
-          <span style={{ 
-            display: "block", 
-            textAlign: "center", 
-            fontSize: "12px" 
-          }}>
+          <span className="text-xs" style={{ textAlign: "center", display: "block", marginTop: "2px" }}>
             {snap.textureScale}x
           </span>
         </label>
 
-        <label style={{ 
-          flex: 1,
-          fontSize: "14px"
-        }}>
+        <label className="compact-label" style={{ flex: 1 }}>
           Displacement:
           <input 
             type="range"
@@ -1725,33 +1638,21 @@ function MaterialPresetPicker() {
             onChange={(e) => {
               state.displacementFactor = parseFloat(e.target.value);
             }}
-            style={{ 
-              width: "100%", 
-              marginTop: "8px"
-            }}
+            className="compact-input"
           />
-          <span style={{ 
-            display: "block", 
-            textAlign: "center", 
-            fontSize: "12px" 
-          }}>
+          <span className="text-xs" style={{ textAlign: "center", display: "block", marginTop: "2px" }}>
             {snap.displacementFactor.toFixed(2)}
           </span>
         </label>
       </div>
-      <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
+      <div className="flex-column">
         {Object.entries(materialPresets).map(([key, preset]) => (
           <button
             key={key}
             onClick={() => switchMaterialPreset(key)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "4px",
-              border: "none",
-              background: snap.materialPreset.current === key ? "#2196F3" : "#4CAF50",
-              color: "white",
-              cursor: "pointer"
-            }}>
+            className="compact-button"
+            style={{ background: snap.materialPreset.current === key ? "#2196F3" : "#4CAF50" }}
+          >
             {preset.name}
           </button>
         ))}
@@ -1775,15 +1676,9 @@ function ZoomControls() {
     state.cameraDistance = parseFloat(e.target.value)
   }
   return (
-    <div style={{
-      position: "absolute",
-      top: "20px",
-      left: "520px",
-      background: "rgba(255,255,255,0.9)",
-      padding: "10px",
-      borderRadius: "4px"
-    }}>
-      <label>
+    // Removed style prop
+    <div className="control-panel"> 
+      <label className="compact-label">
         Camera Zoom:
         <input 
           type="range" 
@@ -1792,7 +1687,8 @@ function ZoomControls() {
           step="0.1" 
           value={snap.cameraDistance} 
           onChange={updateZoom}
-          style={{ width: "100%", marginLeft: "8px" }}
+          className="compact-input"
+          style={{ marginLeft: "0" }} /* Override default input margin if any */
         />
       </label>
     </div>
